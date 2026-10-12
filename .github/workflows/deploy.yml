@@ -1,0 +1,67 @@
+name: Deploy
+
+# main → staging automatically; production via manual approval (GitHub environment protection).
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: meta
+        run: echo "tag=ghcr.io/${{ github.repository }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push runtime + migrate images
+        run: |
+          docker build --target runtime -t ${{ steps.meta.outputs.tag }} .
+          docker build --target migrate -t ${{ steps.meta.outputs.tag }}-migrate .
+          docker push ${{ steps.meta.outputs.tag }}
+          docker push ${{ steps.meta.outputs.tag }}-migrate
+
+  deploy:
+    needs: image
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    env:
+      IMAGE: ${{ needs.image.outputs.tag }}
+      DEPLOY_TARGET: ${{ github.event.inputs.environment || 'staging' }}
+      # Platform credentials live in the GitHub environment (see docs/DEPLOYMENT.md).
+      DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+      HEALTH_URL: ${{ vars.HEALTH_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run database migrations (backward-compatible, before new code)
+        run: ./scripts/deploy.sh migrate
+      - name: Deploy API
+        run: ./scripts/deploy.sh api
+      - name: Deploy workers
+        run: ./scripts/deploy.sh worker
+      - name: Verify health
+        run: |
+          for _ in $(seq 1 30); do
+            if curl -fsS "$HEALTH_URL/health/ready"; then exit 0; fi
+            sleep 10
+          done
+          echo "Readiness check failed" && exit 1

@@ -1,0 +1,72 @@
+# Alert rules for the metrics exposed at /metrics (see docs/DEPLOYMENT.md).
+# Load with Prometheus/Alertmanager, Grafana Cloud or any Prometheus-compatible service.
+groups:
+  - name: abyde-sermon-api
+    rules:
+      - alert: ApiHighErrorRate
+        expr: |
+          sum(rate(http_request_duration_seconds_count{status=~"5.."}[5m]))
+            / sum(rate(http_request_duration_seconds_count[5m])) > 0.02
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: More than 2% of API requests are failing with 5xx.
+
+      - alert: ApiSlowRoute
+        expr: |
+          histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket[5m]))) > 2
+        for: 10m
+        labels: { severity: warn }
+        annotations:
+          summary: 'p95 latency above 2s on {{ $labels.route }}.'
+
+      - alert: ProcessRestarting
+        # Repeated restarts usually mean a crash loop or out-of-memory kills (exit 137).
+        expr: changes(process_start_time_seconds[30m]) > 3
+        labels: { severity: page }
+        annotations:
+          summary: 'An instance restarted more than 3 times in 30 minutes.'
+
+      - alert: HeapNearLimit
+        expr: nodejs_heap_size_used_bytes / nodejs_heap_space_size_total_bytes{space="old"} > 0.9
+        for: 10m
+        labels: { severity: warn }
+        annotations:
+          summary: Heap usage has stayed above 90% for 10 minutes (possible leak).
+
+      - alert: QueueBacklog
+        expr: sum by (queue) (queue_jobs{state="waiting"}) > 100
+        for: 15m
+        labels: { severity: warn }
+        annotations:
+          summary: '{{ $labels.queue }} has had more than 100 waiting jobs for 15 minutes; scale workers.'
+
+      - alert: JobsFailing
+        expr: sum by (queue, job) (rate(jobs_total{outcome="failed"}[15m])) > 0.05
+        for: 15m
+        labels: { severity: warn }
+        annotations:
+          summary: '{{ $labels.queue }}/{{ $labels.job }} jobs are failing repeatedly.'
+
+      - alert: ScheduledJobNotRunning
+        # dispatch-due runs every minute; no completion in 10 minutes means scheduling has stopped.
+        expr: sum(increase(jobs_total{job="dispatch-due",outcome="completed"}[10m])) < 1
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: The publishing dispatcher has not completed a run in 10 minutes.
+
+      - alert: AIProviderFailing
+        expr: |
+          sum by (provider) (rate(ai_calls_total{status="FAILED"}[10m]))
+            / sum by (provider) (rate(ai_calls_total[10m])) > 0.2
+        for: 10m
+        labels: { severity: warn }
+        annotations:
+          summary: 'More than 20% of {{ $labels.provider }} calls are failing.'
+
+      - alert: AISpendSpike
+        expr: sum(increase(ai_estimated_cost_usd_total[1h])) > 20
+        labels: { severity: warn }
+        annotations:
+          summary: Estimated AI spend exceeded $20 in the last hour.

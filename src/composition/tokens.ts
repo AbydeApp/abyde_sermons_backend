@@ -1,0 +1,1 @@
+export const THROTTLER_STORAGE = Symbol('THROTTLER_STORAGE');

@@ -1,0 +1,3 @@
+# Optional worker dependency for Reel smart crop (MEDIA_SPEAKER_TRACKER=command).
+mediapipe>=0.10,<0.11
+opencv-python-headless>=4.9,<5
