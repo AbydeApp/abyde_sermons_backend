@@ -15,8 +15,6 @@ export const QUEUES = {
   SOCIAL_STATUS: 'social-status',
   SOCIAL_METRICS: 'social-metrics',
   TOKEN_MAINTENANCE: 'token-maintenance',
-  REEL_CANDIDATES: 'reel-candidates',
-  REEL_RENDER: 'reel-render',
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];

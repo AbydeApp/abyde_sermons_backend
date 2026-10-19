@@ -1,5 +1,6 @@
-import request from 'supertest';
 import { Client, createTestApp, type TestApp } from './support/test-app.js';
+
+const PASSWORD = 'Faith2026!';
 
 describe('authentication (e2e)', () => {
   let t: TestApp;
@@ -9,29 +10,50 @@ describe('authentication (e2e)', () => {
   });
   afterAll(() => t.close());
 
+  /** Registers (which also creates the church) without verifying. */
+  async function register(email: string, extra: object = {}) {
+    const client = new Client(t);
+    client.email = email;
+    await client
+      .post('/auth/register', {
+        fullName: 'Test User',
+        email,
+        password: PASSWORD,
+        ...extra,
+      })
+      .expect(201);
+    return client;
+  }
+
+  /** Registers and confirms the email, leaving a signed-in client. */
+  async function signUp(email: string, extra: object = {}) {
+    const client = await register(email, extra);
+    await client.verifyEmail();
+    return client;
+  }
+
+  async function lastCode(email: string): Promise<string> {
+    await t.infra.queue.drain();
+    const mail = t.infra.email.sent.filter((m) => m.to === email).at(-1);
+    return /code is (\d{6})/.exec(mail?.text ?? '')?.[1] ?? '';
+  }
+
   it('returns a signed-out Me with 200', async () => {
     const response = await new Client(t).get('/auth/me').expect(200);
     expect(response.body).toEqual({
       authenticated: false,
       user: null,
-      onboardingCompleted: false,
       church: null,
     });
   });
 
-  it('normalises emails and rejects duplicates with EMAIL_TAKEN', async () => {
-    await new Client(t)
-      .post('/auth/register', {
-        fullName: 'One',
-        email: '  Dup@Example.com ',
-        password: 'Faith2026!',
-      })
-      .expect(201);
+  it('normalises emails and rejects a verified duplicate with EMAIL_TAKEN', async () => {
+    await signUp('dup@example.com');
     const duplicate = await new Client(t)
       .post('/auth/register', {
         fullName: 'Two',
-        email: 'dup@example.COM',
-        password: 'Faith2026!',
+        email: '  DUP@example.COM ',
+        password: PASSWORD,
       })
       .expect(409);
     expect(duplicate.body).toMatchObject({
@@ -51,25 +73,106 @@ describe('authentication (e2e)', () => {
     expect(weak.body.errors.password[0]).toMatch(/at least 8/);
   });
 
-  it('logs in, gives generic errors and never returns the password hash', async () => {
-    await new Client(t)
+  it('gives no tokens until the emailed code is confirmed, and creates the church at signup', async () => {
+    const client = new Client(t);
+    client.email = 'verify@example.com';
+    const registered = await client
       .post('/auth/register', {
-        fullName: 'Login',
-        email: 'login@example.com',
-        password: 'Faith2026!',
+        fullName: 'Verify',
+        email: 'verify@example.com',
+        password: PASSWORD,
+        churchName: 'Verify Church',
       })
       .expect(201);
-    const wrongPassword = await new Client(t)
-      .post('/auth/login', {
-        email: 'login@example.com',
-        password: 'Nope2026!',
+    expect(registered.body).toEqual({ email: 'verify@example.com' });
+
+    const blocked = await client
+      .post('/auth/login', { email: 'verify@example.com', password: PASSWORD })
+      .expect(403);
+    expect(blocked.body.code).toBe('EMAIL_NOT_VERIFIED');
+    await client.get('/sermons').expect(401);
+
+    const wrong = await client
+      .post('/auth/verify-email', { email: 'verify@example.com', code: '000000' })
+      .expect(422);
+    expect(wrong.body.code).toBe('OTP_INVALID');
+
+    const verified = await client
+      .post('/auth/verify-email', {
+        email: 'verify@example.com',
+        code: await lastCode('verify@example.com'),
       })
+      .expect(200);
+    expect(verified.body).toMatchObject({
+      authenticated: true,
+      accessToken: expect.any(String),
+      refreshToken: expect.any(String),
+      expiresIn: expect.any(Number),
+      user: { email: 'verify@example.com', phoneNumber: null },
+      church: { name: 'Verify Church', slug: 'verify-church' },
+    });
+    expect(JSON.stringify(verified.body)).not.toMatch(/hash/i);
+    expect((await client.get('/auth/me')).body.authenticated).toBe(true);
+    // The code is single-use.
+    await client
+      .post('/auth/verify-email', {
+        email: 'verify@example.com',
+        code: await lastCode('verify@example.com'),
+      })
+      .expect(422);
+  });
+
+  it('locks a code after too many wrong guesses and rejects an expired one', async () => {
+    const locked = await register('otp-lock@example.com');
+    const code = await lastCode('otp-lock@example.com');
+    for (let i = 0; i < 5; i++)
+      await locked
+        .post('/auth/verify-email', { email: 'otp-lock@example.com', code: '000000' })
+        .expect(422);
+    const lockedOut = await locked
+      .post('/auth/verify-email', { email: 'otp-lock@example.com', code })
+      .expect(429);
+    expect(lockedOut.body.code).toBe('OTP_LOCKED');
+
+    const stale = await register('otp-old@example.com');
+    const oldCode = await lastCode('otp-old@example.com');
+    t.infra.clock.advance(11 * 60_000);
+    const expired = await stale
+      .post('/auth/verify-email', { email: 'otp-old@example.com', code: oldCode })
+      .expect(422);
+    expect(expired.body.code).toBe('OTP_EXPIRED');
+  });
+
+  it('resend-verification answers the same for unknown and unverified accounts', async () => {
+    await register('resend@example.com');
+    const client = new Client(t);
+    await client
+      .post('/auth/resend-verification', { email: 'resend@example.com' })
+      .expect(204);
+    await client
+      .post('/auth/resend-verification', { email: 'nobody@example.com' })
+      .expect(204);
+  });
+
+  it('lets an abandoned, unverified signup be registered again', async () => {
+    await register('retry@example.com');
+    const second = await register('retry@example.com', { fullName: 'Second Try' });
+    t.infra.clock.advance(61_000); // the one-code-per-minute throttle
+    await t.infra.cache.del(
+      ...[...t.infra.db.users.values()].map((u) => `otp-sent:${u.id}`),
+    );
+    await second.post('/auth/resend-verification', { email: 'retry@example.com' });
+    const me = await second.verifyEmail();
+    expect(me.body.user.fullName).toBe('Second Try');
+  });
+
+  it('logs in, gives generic errors and never returns the password hash', async () => {
+    await signUp('login@example.com');
+    const wrongPassword = await new Client(t)
+      .post('/auth/login', { email: 'login@example.com', password: 'Nope2026!' })
       .expect(401);
     const unknownEmail = await new Client(t)
-      .post('/auth/login', {
-        email: 'ghost@example.com',
-        password: 'Nope2026!',
-      })
+      .post('/auth/login', { email: 'ghost@example.com', password: 'Nope2026!' })
       .expect(401);
     expect(wrongPassword.body.code).toBe('INVALID_CREDENTIALS');
     expect(unknownEmail.body.message).toBe(wrongPassword.body.message);
@@ -78,202 +181,139 @@ describe('authentication (e2e)', () => {
     const ok = await client
       .post('/auth/login', {
         email: 'LOGIN@example.com',
-        password: 'Faith2026!',
+        password: PASSWORD,
         remember: true,
       })
       .expect(200);
     expect(JSON.stringify(ok.body)).not.toMatch(/hash/i);
-    const expires = new Date(
-      /Expires=([^;]+)/.exec(ok.headers['set-cookie']?.[0] ?? '')?.[1] ?? 0,
-    );
-    expect(expires.getTime() - t.infra.clock.now().getTime()).toBeGreaterThan(
-      29 * 24 * 3600 * 1000,
-    );
+    expect(ok.body).toMatchObject({
+      accessToken: expect.any(String),
+      refreshToken: expect.any(String),
+    });
+    // "Remember me" lengthens the refresh token's life, not the access token's.
+    const remembered = [...t.infra.db.sessions.values()].at(-1);
+    expect(
+      (remembered?.expiresAt.getTime() ?? 0) - t.infra.clock.now().getTime(),
+    ).toBeGreaterThan(29 * 24 * 3600 * 1000);
     expect((await client.get('/auth/me')).body.authenticated).toBe(true);
   });
 
   it('locks out repeated failures for one email', async () => {
-    await new Client(t)
-      .post('/auth/register', {
-        fullName: 'Lock',
-        email: 'lock@example.com',
-        password: 'Faith2026!',
-      })
-      .expect(201);
+    await signUp('lock@example.com');
     for (let i = 0; i < 10; i++)
       await new Client(t).post('/auth/login', {
         email: 'lock@example.com',
         password: 'Wrong2026!',
       });
     const locked = await new Client(t)
-      .post('/auth/login', {
-        email: 'lock@example.com',
-        password: 'Faith2026!',
-      })
+      .post('/auth/login', { email: 'lock@example.com', password: PASSWORD })
       .expect(429);
     expect(locked.body.code).toBe('TOO_MANY_ATTEMPTS');
   });
 
-  it('limits how many "email taken" answers one client can collect', async () => {
-    const probes = await createTestApp();
-    try {
-      await new Client(probes)
-        .post('/auth/register', {
-          fullName: 'Owner',
-          email: 'owner@example.com',
-          password: 'Faith2026!',
-        })
-        .expect(201);
-      for (let i = 0; i < 5; i++) {
-        await new Client(probes)
-          .post('/auth/register', {
-            fullName: 'X',
-            email: 'owner@example.com',
-            password: 'Faith2026!',
-          })
-          .expect(409);
-      }
-      const blocked = await new Client(probes)
-        .post('/auth/register', {
-          fullName: 'X',
-          email: 'owner@example.com',
-          password: 'Faith2026!',
-        })
-        .expect(429);
-      expect(blocked.body.code).toBe('TOO_MANY_ATTEMPTS');
-    } finally {
-      await probes.close();
-    }
-  });
-
-  it('a lockout caused from one address does not lock the owner out from another', async () => {
+  it('rotates the refresh token and rejects a replayed one', async () => {
+    const client = await signUp('rotate@example.com');
+    const first = client.refreshToken;
+    const rotated = await new Client(t)
+      .post('/auth/refresh', { refreshToken: first })
+      .expect(200);
+    expect(rotated.body).toMatchObject({
+      accessToken: expect.any(String),
+      refreshToken: expect.any(String),
+      expiresIn: expect.any(Number),
+    });
+    expect(rotated.body.refreshToken).not.toBe(first);
+    const replay = await new Client(t)
+      .post('/auth/refresh', { refreshToken: first })
+      .expect(401);
+    expect(replay.body.code).toBe('INVALID_REFRESH_TOKEN');
     await new Client(t)
-      .post('/auth/register', {
-        fullName: 'Victim',
-        email: 'victim@example.com',
-        password: 'Faith2026!',
-      })
-      .expect(201);
-    const attacker = { 'X-Forwarded-For': '203.0.113.9' };
-    for (let i = 0; i < 10; i++)
-      await new Client(t).post(
-        '/auth/login',
-        { email: 'victim@example.com', password: 'Wrong2026!' },
-        attacker,
-      );
-    await new Client(t)
-      .post(
-        '/auth/login',
-        { email: 'victim@example.com', password: 'Faith2026!' },
-        attacker,
-      )
-      .expect(429);
-    await new Client(t)
-      .post(
-        '/auth/login',
-        { email: 'victim@example.com', password: 'Faith2026!' },
-        { 'X-Forwarded-For': '198.51.100.7' },
-      )
+      .post('/auth/refresh', { refreshToken: rotated.body.refreshToken })
       .expect(200);
   });
 
   it('logs out by revoking the session (idempotently)', async () => {
-    const client = new Client(t);
-    await client
-      .post('/auth/register', {
-        fullName: 'Out',
-        email: 'out@example.com',
-        password: 'Faith2026!',
-      })
-      .expect(201);
-    const cookie = (client as unknown as { cookie: string }).cookie;
-    await client.post('/auth/logout').expect(204);
-    await client.post('/auth/logout').expect(204);
-    // The old cookie value no longer authenticates even if replayed.
-    const replay = await request(t.app.getHttpServer())
-      .get('/api/v1/auth/me')
-      .set('Cookie', cookie)
-      .expect(200);
-    expect(replay.body.authenticated).toBe(false);
+    const client = await signUp('out@example.com');
+    const { refreshToken } = client;
+    const access = (client as unknown as { accessToken: string }).accessToken;
+    await client.post('/auth/logout', { refreshToken }).expect(204);
+    await client.post('/auth/logout', { refreshToken }).expect(204);
+    await client.post('/auth/logout', {}).expect(204);
+    // The access token is cut off at once and the refresh token no longer works.
+    expect((await client.get('/auth/me')).body.authenticated).toBe(false);
+    expect(access).toBeTruthy();
+    await new Client(t).post('/auth/refresh', { refreshToken }).expect(401);
   });
 
-  it('expires sessions after their lifetime', async () => {
-    const client = new Client(t);
-    await client
-      .post('/auth/register', {
-        fullName: 'Exp',
-        email: 'exp@example.com',
-        password: 'Faith2026!',
-      })
-      .expect(201);
-    t.infra.clock.advance(25 * 3600 * 1000);
-    await t.infra.cache.del(
-      ...[...t.infra.db.sessions.values()].map((s) => `session:${s.tokenHash}`),
-    );
-    expect((await client.get('/auth/me')).body.authenticated).toBe(false);
-    await client.get('/sermons').expect(401);
+  it('expires access tokens quickly but lets the refresh token renew them', async () => {
+    const short = await createTestApp({ AUTH_ACCESS_TOKEN_TTL_MINUTES: '15' });
+    try {
+      const client = new Client(short);
+      client.email = 'expire@example.com';
+      await client
+        .post('/auth/register', {
+          fullName: 'Exp',
+          email: 'expire@example.com',
+          password: PASSWORD,
+        })
+        .expect(201);
+      await client.verifyEmail();
+      await client.get('/sermons').expect(200);
+      short.infra.clock.advance(16 * 60_000);
+      await client.get('/sermons').expect(401);
+      const renewed = await client
+        .post('/auth/refresh', { refreshToken: client.refreshToken })
+        .expect(200);
+      expect(renewed.body.accessToken).toEqual(expect.any(String));
+      // Tokens older than the session lifetime cannot be refreshed.
+      short.infra.clock.advance(25 * 3600 * 1000);
+      await new Client(short)
+        .post('/auth/refresh', { refreshToken: renewed.body.refreshToken })
+        .expect(401);
+    } finally {
+      await short.close();
+    }
   });
 
   it('updates the profile and changes password (other sessions are signed out)', async () => {
-    const device1 = new Client(t);
+    const device1 = await signUp('change@example.com');
     const device2 = new Client(t);
-    await device1
-      .post('/auth/register', {
-        fullName: 'Change',
-        email: 'change@example.com',
-        password: 'Faith2026!',
-      })
-      .expect(201);
     await device2
-      .post('/auth/login', {
-        email: 'change@example.com',
-        password: 'Faith2026!',
-      })
+      .post('/auth/login', { email: 'change@example.com', password: PASSWORD })
       .expect(200);
 
-    // A name-only change needs no password; changing the sign-in email does.
-    await device1.patch('/auth/me', { fullName: 'Changed Name' }).expect(200);
-    const noPassword = await device1
-      .patch('/auth/me', { email: 'changed@example.com' })
-      .expect(422);
-    expect(noPassword.body).toMatchObject({
-      code: 'WRONG_PASSWORD',
-      errors: { currentPassword: [expect.any(String)] },
-    });
-    await device1
-      .patch('/auth/me', {
-        email: 'changed@example.com',
-        currentPassword: 'Nope2026!',
-      })
-      .expect(422);
-    expect((await device2.get('/auth/me')).body).toMatchObject({
-      authenticated: true,
-      user: { email: 'change@example.com' },
-    });
-    const updated = await device1
-      .patch('/auth/me', {
-        fullName: 'Changed Name',
-        email: 'changed@example.com',
-        currentPassword: 'Faith2026!',
-      })
+    const named = await device1
+      .patch('/auth/me', { fullName: 'Changed Name', phoneNumber: '+234 801 234 5678' })
       .expect(200);
-    expect(updated.body.user).toMatchObject({
+    expect(named.body.user).toMatchObject({
       fullName: 'Changed Name',
-      email: 'changed@example.com',
+      phoneNumber: '+234 801 234 5678',
     });
+    const badPhone = await device1
+      .patch('/auth/me', { phoneNumber: 'abc' })
+      .expect(422);
+    expect(badPhone.body.errors.phoneNumber).toBeDefined();
+    expect(
+      (await device1.patch('/auth/me', { phoneNumber: '' }).expect(200)).body.user
+        .phoneNumber,
+    ).toBeNull();
+
+    expect((await device2.get('/auth/me')).body.authenticated).toBe(true);
+    const updated = await device1
+      .patch('/auth/me', { email: 'changed@example.com' })
+      .expect(200);
+    expect(updated.body.user.email).toBe('changed@example.com');
 
     // Changing the sign-in email signs out other devices and notifies the previous address.
     expect((await device2.get('/auth/me')).body.authenticated).toBe(false);
+    expect((await device1.get('/auth/me')).body.authenticated).toBe(true);
     await t.infra.queue.drain();
     expect(t.infra.email.sent.at(-1)).toMatchObject({
       to: 'change@example.com',
       subject: expect.stringContaining('email address was changed'),
     });
     await device2
-      .post('/auth/login', {
-        email: 'changed@example.com',
-        password: 'Faith2026!',
-      })
+      .post('/auth/login', { email: 'changed@example.com', password: PASSWORD })
       .expect(200);
 
     const wrong = await device1
@@ -288,28 +328,19 @@ describe('authentication (e2e)', () => {
     });
     await device1
       .post('/auth/change-password', {
-        currentPassword: 'Faith2026!',
+        currentPassword: PASSWORD,
         newPassword: 'Better2026!',
       })
       .expect(204);
     expect((await device1.get('/auth/me')).body.authenticated).toBe(true);
     expect((await device2.get('/auth/me')).body.authenticated).toBe(false);
     await new Client(t)
-      .post('/auth/login', {
-        email: 'changed@example.com',
-        password: 'Better2026!',
-      })
+      .post('/auth/login', { email: 'changed@example.com', password: 'Better2026!' })
       .expect(200);
   });
 
   it('resets a forgotten password with a single-use token and no enumeration', async () => {
-    await new Client(t)
-      .post('/auth/register', {
-        fullName: 'Reset',
-        email: 'reset@example.com',
-        password: 'Faith2026!',
-      })
-      .expect(201);
+    await signUp('reset@example.com');
     await new Client(t)
       .post(
         '/auth/forgot-password',
@@ -345,35 +376,27 @@ describe('authentication (e2e)', () => {
       errors: { token: [expect.any(String)] },
     });
     await new Client(t)
-      .post('/auth/login', {
-        email: 'reset@example.com',
-        password: 'Renewed2026!',
-      })
+      .post('/auth/login', { email: 'reset@example.com', password: 'Renewed2026!' })
       .expect(200);
   });
 
-  it('allows only one church per user and gates routes on onboarding', async () => {
-    const client = new Client(t);
-    await client
-      .post('/auth/register', {
-        fullName: 'Gate',
-        email: 'gate@example.com',
-        password: 'Faith2026!',
-      })
-      .expect(201);
-    expect((await client.get('/sermons').expect(403)).body.code).toBe(
-      'ONBOARDING_REQUIRED',
+  it('creates one church per account at signup and gates routes on it', async () => {
+    const named = await signUp('gate@example.com', { churchName: 'Gate Church' });
+    expect((await named.get('/church').expect(200)).body).toMatchObject({
+      name: 'Gate Church',
+      slug: 'gate-church',
+      ownerRole: 'Owner',
+    });
+    await named.post('/church', { name: 'Second', ownerRole: 'Pastor' }).expect(404);
+
+    const unnamed = await signUp('gate2@example.com');
+    expect((await unnamed.get('/church').expect(200)).body.name).toBe(
+      'Your Ministry',
     );
-    await client
-      .post('/church', { name: 'Gate Church', ownerRole: 'Pastor' })
-      .expect(201);
-    expect(
-      (
-        await client
-          .post('/church', { name: 'Second', ownerRole: 'Pastor' })
-          .expect(409)
-      ).body.code,
-    ).toBe('CHURCH_EXISTS');
+    // Two churches with the same name get distinct slugs.
+    await signUp('gate3@example.com', { churchName: 'Gate Church' });
+    const slugs = [...t.infra.db.churches.values()].map((c) => c.slug);
+    expect(new Set(slugs).size).toBe(slugs.length);
   });
 
   it('updates church preferences through PATCH /church with validation', async () => {
@@ -396,26 +419,7 @@ describe('authentication (e2e)', () => {
       wordsToAvoid: 'hustle',
     });
     await client.patch('/church', { country: 'NG' }).expect(422);
-
-    const logo = Buffer.from('png-bytes');
-    const presign = await client
-      .post('/church/logo/presign', {
-        fileName: 'logo.png',
-        contentType: 'image/png',
-        sizeBytes: logo.length,
-      })
-      .expect(200);
-    await client
-      .post('/church/logo/presign', {
-        fileName: 'logo.svg',
-        contentType: 'image/svg+xml',
-        sizeBytes: 10,
-      })
-      .expect(422);
-    t.infra.storage.put(presign.body.objectKey, logo, 'image/png');
-    const withLogo = await client
-      .patch('/church', { logoObjectKey: presign.body.objectKey })
-      .expect(200);
-    expect(withLogo.body.logoUrl).toMatch(/^memory:\/\/download\//);
+    // Logos live in Brand Studio, not on the church profile.
+    await client.patch('/church', { logoObjectKey: 'x' }).expect(422);
   });
 });

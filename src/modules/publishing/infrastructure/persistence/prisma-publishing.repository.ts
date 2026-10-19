@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ContentType } from '../../../content/domain/content-types.js';
+import type { ContentType } from '../../../content/helper.js';
 import {
   isUniqueViolation,
   PrismaService,

@@ -1,9 +1,9 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp, { type OverlayOptions } from 'sharp';
-import { PermanentJobError } from '../../../../shared/application/jobs.js';
-import { runProcess } from '../../../../shared/infrastructure/process/run-process.js';
-import { logoBox, renderCardSvg } from '../../domain/template-svg.js';
+import { PermanentJobError } from '../../../shared/application/jobs.js';
+import { runProcess } from '../../../shared/infrastructure/process/run-process.js';
+import { logoBox, renderCardSvg } from './template-svg.js';
 import type {
   BrandRenderingPort,
   RenderCarouselInput,
@@ -11,7 +11,7 @@ import type {
   RenderImageInput,
   RenderThumbnailInput,
   RenderVideoInput,
-} from '../../application/ports/out/brand.ports.js';
+} from './ports.js';
 import { buildAssCaptions } from './ass-captions.js';
 import { buildClipArgs, buildThumbnailArgs } from './ffmpeg-clip-args.js';
 

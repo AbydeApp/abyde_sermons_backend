@@ -7,11 +7,8 @@ import {
   TRANSCRIPT_REPOSITORY,
   type TranscriptRepositoryPort,
 } from '../../sermons/application/ports/out/transcript-repository.port.js';
-import type { TimedText } from '../domain/captions.js';
-import type {
-  SermonMediaPort,
-  SermonVideoSource,
-} from '../application/ports/out/sermon-media.port.js';
+import type { TimedText } from '../helper.js';
+import type { SermonMediaPort, SermonVideoSource } from './ports.js';
 
 /** Adapter from the brand module onto the sermons module's read ports (one-way dependency). */
 @Injectable()

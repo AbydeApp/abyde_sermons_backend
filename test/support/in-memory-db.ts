@@ -1,12 +1,13 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { UnitOfWorkPort } from '../../src/shared/application/ports/unit-of-work.port.js';
 import type { UsageUnit } from '../../src/shared/application/ports/usage-meter.port.js';
-import type { UserProps } from '../../src/modules/auth/domain/user.entity.js';
 import type {
+  EmailVerificationRecord,
   PasswordResetRecord,
   SessionRecord,
-} from '../../src/modules/auth/application/ports/out/session-repository.port.js';
-import type { ChurchProps } from '../../src/modules/church/domain/church.entity.js';
+  UserRecord,
+} from '../../src/modules/auth/auth.repository.js';
+import type { ChurchRecord } from '../../src/modules/auth/auth.repository.js';
 import type { UploadRecord } from '../../src/modules/uploads/application/ports/out/upload-repository.port.js';
 import type { SermonProps } from '../../src/modules/sermons/domain/sermon.entity.js';
 import type { SermonAssetRecord } from '../../src/modules/sermons/application/ports/out/sermon-repository.port.js';
@@ -19,13 +20,12 @@ import type { EmbeddingRow } from '../../src/modules/sermons/application/ports/o
 import type {
   ContentItemProps,
   ContentVersionRecord,
-} from '../../src/modules/content/domain/content-item.entity.js';
-import type { CalendarItemProps } from '../../src/modules/content/domain/calendar-item.entity.js';
-import type { GenerationJobRecord } from '../../src/modules/content/domain/generation-group.js';
+} from '../../src/modules/content/helper.js';
+import type { CalendarItemProps } from '../../src/modules/content/helper.js';
+import type { GenerationJobRecord } from '../../src/modules/content/helper.js';
 import type { SubscriptionRecord } from '../../src/modules/billing/domain/subscription.js';
 import type { IntegrationRecord } from '../../src/modules/integrations/domain/integration.js';
-import type { BrandProfile } from '../../src/modules/brand/domain/brand-profile.js';
-import type { MediaAsset } from '../../src/modules/brand/domain/media-asset.js';
+import type { BrandProfile, MediaAsset } from '../../src/modules/brand/helper.js';
 import type { SocialAuditEntry } from '../../src/modules/social/application/ports/out/social-repositories.port.js';
 import type { SocialConnection } from '../../src/modules/social/domain/social-connection.js';
 import type {
@@ -33,18 +33,17 @@ import type {
   SocialPublication,
 } from '../../src/modules/social/domain/social-post.js';
 import type { PublishAttemptRecord } from '../../src/modules/publishing/application/ports/out/publishing.ports.js';
-import type { Reel } from '../../src/modules/reels/domain/reel.js';
-import type { ReelCandidate } from '../../src/modules/reels/domain/reel-candidates.js';
 
 /**
  * Process-local stand-in for PostgreSQL used by every test. Tests never touch a real database
  * (project rule): repositories are exercised through the same ports the Prisma adapters implement.
  */
 export class InMemoryDb {
-  users = new Map<string, UserProps>();
+  users = new Map<string, UserRecord>();
   sessions = new Map<string, SessionRecord & { userAgent: string | null }>();
   passwordResets = new Map<string, PasswordResetRecord>();
-  churches = new Map<string, ChurchProps>();
+  emailVerifications = new Map<string, EmailVerificationRecord>();
+  churches = new Map<string, ChurchRecord>();
   uploads = new Map<string, UploadRecord>();
   sermons = new Map<string, SermonProps & { updatedAt: Date }>();
   assets = new Map<string, SermonAssetRecord>();
@@ -123,8 +122,6 @@ export class InMemoryDb {
   socialPosts = new Map<string, SocialPost>();
   socialPublications = new Map<string, SocialPublication>();
   socialAudit: Array<SocialAuditEntry & { createdAt: Date }> = [];
-  reels = new Map<string, Reel>();
-  reelCandidates = new Map<string, ReelCandidate>();
 
   snapshot(): Record<string, unknown> {
     return structuredClone(Object.fromEntries(Object.entries(this)));

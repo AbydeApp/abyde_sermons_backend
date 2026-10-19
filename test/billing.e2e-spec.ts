@@ -32,10 +32,6 @@ describe('billing, plan limits and webhooks (e2e)', () => {
       status: 'ACTIVE',
       currentPeriodEnd: '2026-10-31T23:00:00.000Z',
       features: {
-        reelsPerPeriod: 0,
-        reelHooks: false,
-        animatedCaptions: false,
-        priorityProcessing: false,
         sourceRetentionDays: 3,
       },
     });
@@ -44,8 +40,6 @@ describe('billing, plan limits and webhooks (e2e)', () => {
       sermonsUsed: 0,
       sermonsLimit: 2,
       contentGenerated: 0,
-      reelsUsed: 0,
-      reelsLimit: 0,
       periodEnd: '2026-10-31T23:00:00.000Z',
     });
   });

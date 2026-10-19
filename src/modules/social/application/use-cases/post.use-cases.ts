@@ -20,7 +20,7 @@ import type {
 import {
   CONTENT_REPOSITORY,
   type ContentRepositoryPort,
-} from '../../../content/application/ports/out/content-repository.port.js';
+} from '../../../content/content.repository.js';
 import type { SocialPlatform } from '../../domain/social-platform.js';
 import {
   assertDeletable,

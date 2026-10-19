@@ -3,7 +3,7 @@ import {
   PrismaContentQuery,
   PrismaContentRepository,
   PrismaCalendarRepository,
-} from '../../../content/infrastructure/persistence/prisma-content.repositories.js';
+} from '../../../content/content.repository.js';
 import {
   PrismaSermonQuery,
   PrismaSermonRepository,

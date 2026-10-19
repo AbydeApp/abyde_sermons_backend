@@ -1,24 +1,23 @@
-import { applyBrandPatch, defaultBrandProfile } from './brand-profile.js';
-import { buildCaptionCues } from './captions.js';
 import {
+  applyBrandPatch,
+  brandAssetKey,
+  buildCaptionCues,
   chunkText,
+  defaultBrandProfile,
+  generatedAssetKey,
   MAX_CAROUSEL_SLIDES,
   planCarousel,
-} from './carousel-planner.js';
-import { resolveClipWindow } from './clip-window.js';
-import {
-  brandAssetKey,
-  generatedAssetKey,
+  resolveClipWindow,
+  resolveTemplate,
   validateLogoUpload,
-} from './media-asset.js';
-import { resolveTemplate } from './templates.js';
+} from './helper.js';
 import {
   escapeXml,
   fitText,
   readableOn,
   renderCardSvg,
   wrapText,
-} from './template-svg.js';
+} from './adapters/template-svg.js';
 
 const profile = () =>
   defaultBrandProfile({

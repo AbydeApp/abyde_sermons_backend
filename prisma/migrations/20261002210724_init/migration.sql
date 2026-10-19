@@ -51,7 +51,6 @@ CREATE TABLE "users" (
     "email" TEXT NOT NULL,
     "password_hash" TEXT NOT NULL,
     "email_verified_at" TIMESTAMP(3),
-    "onboarding_completed" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -91,7 +90,6 @@ CREATE TABLE "churches" (
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "owner_role" TEXT NOT NULL,
-    "logo_object_key" TEXT,
     "denomination" TEXT,
     "website" TEXT,
     "description" TEXT,

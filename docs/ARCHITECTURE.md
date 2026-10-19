@@ -25,7 +25,7 @@ src/
 └── shared/{domain,application,infrastructure}
 ```
 
-Modules: `auth`, `church`, `uploads`, `sermons` (transcripts, intelligence, scriptures, embeddings, pipeline, source retention), `content` (generation, content, versions, calendar), `library` (search, semantic search, ask), `usage`, `billing` (plans and entitlements), `integrations`, `publishing`, `brand` (Brand Studio, media pipeline), `social` (direct social publishing), `reels` (Reel candidates, hooks, branded 9:16 renders), `analytics`, `health`, `system` (metrics, email, maintenance jobs).
+Modules: `auth`, `church`, `uploads`, `sermons` (transcripts, intelligence, scriptures, embeddings, pipeline, source retention), `content` (generation, content, versions, calendar), `library` (search, semantic search, ask), `usage`, `billing` (plans and entitlements), `integrations`, `publishing`, `brand` (Brand Studio, media pipeline), `social` (direct social publishing), `analytics`, `health`, `system` (metrics, email, maintenance jobs).
 
 Rules enforced in code review and by structure:
 
@@ -184,29 +184,11 @@ Security headers and CSRF protection come from Nest 12 (`app.useSecurityHeaders(
 
 ## Plans and entitlements
 
-Plan rules live in one table (`billing/domain/plans.ts`): sermons per period plus Reel features (`reelsPerPeriod`, `reelHooks`, `animatedCaptions`, `priorityProcessing`, `sourceRetentionDays`). `EntitlementService` evaluates them and is exposed to other modules as the shared `PLAN_ENTITLEMENTS` port; no other code checks a plan id. `GET /billing/subscription` returns the features so the web app can show or hide Reel tools, and `GET /billing/usage` reports `reelsUsed` / `reelsLimit`.
-
-| Plan | Sermons | Reels / period | Hooks, animated captions | Priority renders | Source kept |
-|---|---|---|---|---|---|
-| free | 2 | 0 | no | no | 3 days |
-| starter | 6 | 0 | no | no | 3 days |
-| growth | 15 | 8 | yes | no | 14 days |
-| ministry | 40 | 24 | yes | yes | 30 days |
+Plan rules live in one table (`billing/domain/plans.ts`): sermons per period and `sourceRetentionDays`. `EntitlementService` exposes them through the shared `PLAN_ENTITLEMENTS` port. `GET /billing/subscription` returns the current plan and retention features; `GET /billing/usage` reports sermon and content usage. Reels are deferred beyond v1.
 
 ## Source retention
 
-The original upload's expiry is fixed at upload time (`sermon_assets.expires_at` = now + the plan's `sourceRetentionDays`). An hourly maintenance job deletes expired originals from storage and stamps `deleted_at`; it skips sermons still processing. Everything derived from the original is kept. After expiry, new clips and Reels from that sermon return `SOURCE_EXPIRED`; existing renders, transcripts, intelligence and candidates are unaffected.
-
-## Reels (`reels` module)
-
-Principle: the Reel is the pastor's real video and voice. AI picks moments and writes on-screen hook copy; it never generates or alters what the pastor says.
-
-- **Candidates.** When a media sermon becomes READY the pipeline queues `reel-candidates` (job contract in `shared/application/reel-jobs.ts`, so neither module imports the other). The transcript is split into timed sentences (word timings where available); one structured model call proposes moments by sentence index with 1–10 scores (standalone, impact, quotability, context independence). `selectReelCandidates` then does the work that must be trustworthy: snaps boundaries to whole sentences with a short lead-in and tail, stretches or trims by whole sentences to the allowed length (`MEDIA_REEL_MIN/MAX_SECONDS`), takes the transcript text from the sermon itself (never from the model), ranks by weighted score and drops overlaps, keeping 5–10. Automatic runs skip sermons that already have candidates; `POST /sermons/:id/reel-candidates` regenerates (per-church AI budget).
-- **Drafts and hooks.** `POST /reels` from a candidate or a custom window (validated against the sermon). `POST /reels/:id/hooks` returns three hook options in the church's voice (avoid-phrases, preferred terms, emoji policy), with guardrails in code: no quotation marks (a hook is never presented as the pastor's words), length limit, avoided phrases dropped, duplicates removed. Hook generation never renders. `PATCH /reels/:id` edits title, hook, caption style/position and window; edits are refused while rendering and, on a rendered Reel, mark it `editedSinceRender` and unapproved.
-- **Render request.** `POST /reels/:id/render` is naturally idempotent (an unchanged rendered Reel or one already rendering is returned as is). Under a per-church lock it checks the plan (Reels included, animated captions and hooks allowed) and the allowance (`reelsUsed + renders in flight < reelsPerPeriod`), moves the Reel to `QUEUED` with a new `renderAttempt`, and queues `reel-render` (job id per attempt; Ministry jobs get queue priority). Failing to enqueue marks the Reel FAILED instead of leaving it queued.
-- **Render worker.** States `QUEUED → PREPARING → CROPPING → ADDING_HOOK → ADDING_CAPTIONS → BRANDING → ENCODING → COMPLETED | FAILED`, each written with a compare-and-set on `renderAttempt`, so a deleted, re-queued or finished Reel stops a stale worker (`GET /reels/:id` shows status and progress). The worker downloads the original, probes it (rotation aware), runs the `SpeakerTrackingPort` for landscape sources and plans a smooth crop (`planCropPath`: hold gaps, median filter, dead zone, pan-speed limit, few keyframes), builds caption cues from word timings, and calls the `ReelRendererPort`. The FFmpeg adapter does one encode: exact cut, moving 9:16 crop (or blurred-fill fit for vertical sources), real audio cleaned only (high-pass, light noise reduction, gentle speech compression, -14 LUFS), silent branded outro, libass overlay (hook animation per style, IMPACT/QUESTION/MINIMAL/HIGHLIGHT/TYPEWRITER; captions CLEAN/WORD_HIGHLIGHT/POP/DYNAMIC; speaker/church label; outro text), logo small during the moment and large on the outro. Output is stored as Brand Studio media assets (VIDEO + THUMBNAIL) with ids derived from (Reel, attempt), so retries overwrite instead of duplicating and social posts can attach them like any generated media (`contentId` is optional on posts for this). A render superseded mid-encode deletes its own output. Usage: `REEL_RENDERED` (counted on completion), `RENDER_SECOND`, `STORAGE_BYTES`, all with dedupe keys. Stuck renders are failed after an hour by a recurring sweep.
-- **Video settings.** `brand_profiles.video_settings` (hook style, caption style and position, logo position, speaker/church label switches, outro) set each new Reel's defaults; a Reel overrides hook and caption choices.
-- **Not built (V1 exclusions):** avatars, voice cloning, synthetic or text-to-video sermons, B-roll, timeline editing, YouTube downloading.
+The original upload's expiry is fixed at upload time (`sermon_assets.expires_at` = now + the plan's `sourceRetentionDays`). An hourly maintenance job deletes expired originals from storage and stamps `deleted_at`; it skips sermons still processing. Everything derived from the original is kept. After expiry, new clips from that sermon return `SOURCE_EXPIRED`; existing renders, transcripts and intelligence are unaffected.
 
 ## Social publishing additions
 

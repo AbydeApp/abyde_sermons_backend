@@ -1,7 +1,7 @@
-import { RecoverStuckGenerationsUseCase } from '../src/modules/content/application/use-cases/recover-stuck-generations.use-case.js';
+import { GenerationService } from '../src/modules/content/generation.service.js';
 import { RecoverStuckSermonsUseCase } from '../src/modules/sermons/application/use-cases/recover-stuck-sermons.use-case.js';
 import { PurgeOldRecordsUseCase } from '../src/modules/system/purge-old-records.use-case.js';
-import { PurgeExpiredAuthUseCase } from '../src/modules/auth/application/use-cases/purge-expired-auth.use-case.js';
+import { AuthService } from '../src/modules/auth/auth.service.js';
 import { Client, createTestApp, type TestApp } from './support/test-app.js';
 
 /** Behaviour under interleavings and failures: deletes and edits during processing, lost jobs, queue outages. */
@@ -108,10 +108,10 @@ describe('resilience (e2e)', () => {
       })
       .expect(202);
     t.infra.queue.jobs.length = 0;
-    const recover = t.app.get(RecoverStuckGenerationsUseCase);
-    expect(await recover.execute()).toBe(0);
+    const recover = t.app.get(GenerationService);
+    expect(await recover.recoverStuck()).toBe(0);
     t.infra.clock.advance(31 * 60 * 1000);
-    expect(await recover.execute()).toBe(2);
+    expect(await recover.recoverStuck()).toBe(2);
     const stuck = await client
       .get(`/sermons/${id}/generations/${group.body.id}`)
       .expect(200);
@@ -162,10 +162,10 @@ describe('resilience (e2e)', () => {
       )
       .expect(204);
     await t.infra.queue.drain(); // the reset token is issued by a background job
-    const purge = t.app.get(PurgeExpiredAuthUseCase);
-    expect(await purge.execute()).toEqual({ sessions: 0, resetTokens: 0 });
+    const purge = t.app.get(AuthService);
+    expect(await purge.purgeExpired()).toEqual({ sessions: 0, resetTokens: 0 });
     t.infra.clock.advance(32 * 24 * 3600 * 1000);
-    expect(await purge.execute()).toEqual({ sessions: 1, resetTokens: 1 });
+    expect(await purge.purgeExpired()).toEqual({ sessions: 1, resetTokens: 1 });
     expect(t.infra.db.users.size).toBe(1);
   });
 

@@ -1,11 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
-import { CreateChurchUseCase } from './modules/church/application/use-cases/church.use-cases.js';
-import { RegisterUseCase } from './modules/auth/application/use-cases/register.use-case.js';
 import {
-  USER_REPOSITORY,
-  type UserRepositoryPort,
-} from './modules/auth/application/ports/out/user-repository.port.js';
+  AUTH_REPOSITORY,
+  type AuthRepository,
+} from './modules/auth/auth.repository.js';
+import { AuthService } from './modules/auth/auth.service.js';
 import { CreateSermonUseCase } from './modules/sermons/application/use-cases/sermon-crud.use-cases.js';
 import { APP_CONFIG } from './shared/infrastructure/config/config.module.js';
 import type { AppConfig } from './shared/infrastructure/config/env.schema.js';
@@ -78,27 +77,27 @@ async function seed() {
     throw new Error('Refusing to seed a staging/production environment');
   }
   try {
-    const users = app.get<UserRepositoryPort>(USER_REPOSITORY);
+    const users = app.get<AuthRepository>(AUTH_REPOSITORY);
     for (const demo of DEMO) {
-      if (await users.findByEmail(demo.user.email)) {
+      if (await users.findUserByEmail(demo.user.email)) {
         console.log(`skip ${demo.user.email} (already seeded)`);
         continue;
       }
-      const { me } = await app.get(RegisterUseCase).execute({
+      await app.get(AuthService).register({
         ...demo.user,
         password: 'DemoPass2026',
-        userAgent: 'seed',
-        ip: null,
+        churchName: demo.church.name,
       });
-      const auth = {
-        userId: me.user?.id ?? '',
-        sessionId: 'seed',
-        churchId: null,
-      };
-      const onboarded = await app
-        .get(CreateChurchUseCase)
-        .execute(auth, demo.church);
-      const churchId = onboarded.church?.id ?? '';
+      // No inbox in development: confirm the address directly.
+      const created = await users.findUserByEmail(demo.user.email);
+      if (!created) throw new Error(`Could not create ${demo.user.email}`);
+      await users.saveUser({ ...created, emailVerifiedAt: new Date() });
+      const auth = app.get(AuthService);
+      const churchId = (await auth.findIdByUserId(created.id)) ?? '';
+      await auth.updateChurch(churchId, {
+        ownerRole: demo.church.ownerRole,
+        denomination: demo.church.denomination,
+      });
       for (const sermon of demo.sermons)
         await app.get(CreateSermonUseCase).execute(churchId, sermon);
       console.log(

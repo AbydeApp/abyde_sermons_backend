@@ -1,12 +1,12 @@
 import type {
   BrandProfileRepositoryPort,
   MediaAssetRepositoryPort,
-} from '../../src/modules/brand/application/ports/out/brand.ports.js';
-import type { BrandProfile } from '../../src/modules/brand/domain/brand-profile.js';
+} from '../../src/modules/brand/brand.repository.js';
 import type {
+  BrandProfile,
   MediaAsset,
   MediaTechnicalMetadata,
-} from '../../src/modules/brand/domain/media-asset.js';
+} from '../../src/modules/brand/helper.js';
 import type {
   DueTarget,
   SocialAuditEntry,
@@ -85,6 +85,34 @@ export class InMemoryMediaAssetRepository implements MediaAssetRepositoryPort {
   async findByIds(churchId: string, ids: string[]) {
     return this.own(churchId)
       .filter((asset) => ids.includes(asset.id))
+      .map(clone);
+  }
+
+  async listBrandLogos(churchId: string, limit: number) {
+    return this.own(churchId)
+      .filter((asset) => asset.kind === 'BRAND_LOGO')
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit)
+      .map(clone);
+  }
+
+  async listByContentIds(
+    churchId: string,
+    contentItemIds: string[],
+    limit: number,
+  ) {
+    return this.own(churchId)
+      .filter(
+        (asset) =>
+          asset.contentItemId !== null &&
+          contentItemIds.includes(asset.contentItemId),
+      )
+      .sort(
+        (a, b) =>
+          b.createdAt.getTime() - a.createdAt.getTime() ||
+          a.position - b.position,
+      )
+      .slice(0, limit)
       .map(clone);
   }
 

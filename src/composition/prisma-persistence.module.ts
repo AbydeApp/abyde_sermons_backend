@@ -5,32 +5,24 @@ import {
 } from '../shared/application/ports/usage-meter.port.js';
 import { ANALYTICS_QUERY } from '../modules/analytics/application/ports/out/analytics-query.port.js';
 import { PrismaAnalyticsQuery } from '../modules/analytics/infrastructure/prisma-analytics.query.js';
-import { USER_REPOSITORY } from '../modules/auth/application/ports/out/user-repository.port.js';
 import {
-  PASSWORD_RESET_REPOSITORY,
-  SESSION_REPOSITORY,
-} from '../modules/auth/application/ports/out/session-repository.port.js';
-import {
-  PrismaPasswordResetRepository,
-  PrismaSessionRepository,
-  PrismaUserRepository,
-} from '../modules/auth/infrastructure/persistence/prisma-auth.repositories.js';
+  AUTH_REPOSITORY,
+  PrismaAuthRepository,
+} from '../modules/auth/auth.repository.js';
 import { SUBSCRIPTION_REPOSITORY } from '../modules/billing/application/ports/out/billing.ports.js';
 import { PrismaSubscriptionRepository } from '../modules/billing/infrastructure/persistence/prisma-subscription.repository.js';
-import { CHURCH_REPOSITORY } from '../modules/church/application/ports/out/church-repository.port.js';
-import { PrismaChurchRepository } from '../modules/church/infrastructure/persistence/prisma-church.repository.js';
 import {
   CALENDAR_REPOSITORY,
   CONTENT_QUERY,
   CONTENT_REPOSITORY,
   GENERATION_REPOSITORY,
-} from '../modules/content/application/ports/out/content-repository.port.js';
+} from '../modules/content/content.repository.js';
 import {
   PrismaCalendarRepository,
   PrismaContentQuery,
   PrismaContentRepository,
   PrismaGenerationRepository,
-} from '../modules/content/infrastructure/persistence/prisma-content.repositories.js';
+} from '../modules/content/content.repository.js';
 import { INTEGRATION_REPOSITORY } from '../modules/integrations/application/ports/out/integration.ports.js';
 import { PrismaIntegrationRepository } from '../modules/integrations/infrastructure/persistence/prisma-integration.repository.js';
 import { LIBRARY_FACETS } from '../modules/library/application/ports/out/library-facets.port.js';
@@ -67,11 +59,9 @@ import {
 import {
   BRAND_PROFILE_REPOSITORY,
   MEDIA_ASSET_REPOSITORY,
-} from '../modules/brand/application/ports/out/brand.ports.js';
-import {
   PrismaBrandProfileRepository,
   PrismaMediaAssetRepository,
-} from '../modules/brand/infrastructure/persistence/prisma-brand.repositories.js';
+} from '../modules/brand/brand.repository.js';
 import {
   SOCIAL_AUDIT_LOG,
   SOCIAL_CONNECTION_REPOSITORY,
@@ -83,24 +73,9 @@ import {
   PrismaSocialPostRepository,
 } from '../modules/social/infrastructure/persistence/prisma-social.repositories.js';
 
-import {
-  REEL_CANDIDATE_REPOSITORY,
-  REEL_REPOSITORY,
-} from '../modules/reels/application/ports/out/reel.ports.js';
-import {
-  PrismaReelCandidateRepository,
-  PrismaReelRepository,
-} from '../modules/reels/infrastructure/persistence/prisma-reel.repositories.js';
-
 /** Binds every repository port to its Prisma adapter (the only place Prisma repositories are chosen). */
 export const PRISMA_REPOSITORIES: Provider[] = [
-  { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
-  { provide: SESSION_REPOSITORY, useClass: PrismaSessionRepository },
-  {
-    provide: PASSWORD_RESET_REPOSITORY,
-    useClass: PrismaPasswordResetRepository,
-  },
-  { provide: CHURCH_REPOSITORY, useClass: PrismaChurchRepository },
+  { provide: AUTH_REPOSITORY, useClass: PrismaAuthRepository },
   { provide: UPLOAD_REPOSITORY, useClass: PrismaUploadRepository },
   { provide: SERMON_REPOSITORY, useClass: PrismaSermonRepository },
   { provide: SERMON_QUERY, useClass: PrismaSermonQuery },
@@ -127,11 +102,6 @@ export const PRISMA_REPOSITORIES: Provider[] = [
   },
   { provide: SOCIAL_POST_REPOSITORY, useClass: PrismaSocialPostRepository },
   { provide: SOCIAL_AUDIT_LOG, useClass: PrismaSocialAuditLog },
-  { provide: REEL_REPOSITORY, useClass: PrismaReelRepository },
-  {
-    provide: REEL_CANDIDATE_REPOSITORY,
-    useClass: PrismaReelCandidateRepository,
-  },
 ];
 
 @Global()

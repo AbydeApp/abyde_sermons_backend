@@ -23,7 +23,7 @@ import {
   type CalendarRepositoryPort,
   CONTENT_REPOSITORY,
   type ContentRepositoryPort,
-} from '../../../content/application/ports/out/content-repository.port.js';
+} from '../../../content/content.repository.js';
 import { IntegrationCredentialsService } from '../../../integrations/application/use-cases/integration.use-cases.js';
 import {
   AUTO_PUBLISHED_TYPES,

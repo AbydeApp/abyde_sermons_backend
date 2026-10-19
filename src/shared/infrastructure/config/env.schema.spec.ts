@@ -22,6 +22,7 @@ const production = {
   BILLING_PAYSTACK_PLAN_GROWTH: 'PLN_g',
   BILLING_PAYSTACK_PLAN_MINISTRY: 'PLN_m',
   DATABASE_EXPECTED_PROCESSES: '11',
+  AUTH_ACCESS_TOKEN_SECRET: 'x'.repeat(48),
   APP_WEB_URL: 'https://app.abyde.app',
   APP_PUBLIC_API_URL: 'https://api.abyde.app/api/v1',
   APP_CORS_ORIGINS: 'https://app.abyde.app',

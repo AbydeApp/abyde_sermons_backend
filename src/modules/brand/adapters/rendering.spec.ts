@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp from 'sharp';
-import { resolveTemplate } from '../../domain/templates.js';
+import { resolveTemplate } from '../helper.js';
 import {
   assColour,
   assText,

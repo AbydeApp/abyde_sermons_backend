@@ -14,6 +14,8 @@ export const TEST_ENV: Record<string, string> = {
   APP_WEB_URL: 'http://web.test',
   APP_RATE_LIMIT_MAX: '10000',
   AUTH_RATE_LIMIT_MAX: '10000',
+  // Tests move the clock by days without refreshing, so access tokens must outlive that.
+  AUTH_ACCESS_TOKEN_TTL_MINUTES: '100000',
   APP_AI_RATE_LIMIT_MAX: '10000',
   DATABASE_URL: 'postgresql://unused:unused@localhost:5432/unused',
   REDIS_URL: 'redis://localhost:6379',
@@ -49,7 +51,8 @@ export async function createTestApp(
 
 /** Cookie-preserving HTTP client for one signed-in user. */
 export class Client {
-  private cookie = '';
+  private accessToken = '';
+  refreshToken = '';
   email = '';
 
   constructor(private readonly testApp: TestApp) {}
@@ -63,12 +66,16 @@ export class Client {
     let req = request(this.testApp.app.getHttpServer())
       [method](`/api/v1${path}`)
       .set('Origin', 'http://web.test');
-    if (this.cookie) req = req.set('Cookie', this.cookie);
+    if (this.accessToken)
+      req = req.set('Authorization', `Bearer ${this.accessToken}`);
     for (const [key, value] of Object.entries(headers))
       req = req.set(key, value);
-    req.on('response', (response: { headers: Record<string, unknown> }) => {
-      const setCookie = response.headers['set-cookie'] as string[] | undefined;
-      if (setCookie?.[0]) this.cookie = setCookie[0].split(';')[0] ?? '';
+    req.on('response', (response: { body?: unknown }) => {
+      const tokens = response.body as
+        | { accessToken?: string; refreshToken?: string }
+        | undefined;
+      if (tokens?.accessToken) this.accessToken = tokens.accessToken;
+      if (tokens?.refreshToken) this.refreshToken = tokens.refreshToken;
     });
     return body ? req.send(body) : req;
   }
@@ -84,7 +91,7 @@ export class Client {
   delete = (path: string, headers?: Record<string, string>) =>
     this.send('delete', path, undefined, headers);
 
-  /** Registers and creates a church; returns the church id. */
+  /** Signs up (which creates the church) and verifies the email; returns the church id. */
   async onboard(name: string): Promise<string> {
     const email = `${name.toLowerCase().replace(/\W+/g, '-')}-${Math.random().toString(36).slice(2, 8)}@example.com`;
     this.email = email;
@@ -92,12 +99,22 @@ export class Client {
       fullName: `${name} Pastor`,
       email,
       password: 'Faith2026!',
+      churchName: name,
     }).expect(201);
-    const me = await this.post('/church', {
-      name,
-      ownerRole: 'Lead Pastor',
-    }).expect(201);
+    const me = await this.verifyEmail();
     return (me.body as { church: { id: string } }).church.id;
+  }
+
+  /** Reads the code from the last email sent to this client's address and confirms it. */
+  async verifyEmail() {
+    await this.testApp.infra.queue.drain(); // the code is mailed by a background job
+    const mail = this.testApp.infra.email.sent
+      .filter((m) => m.to === this.email)
+      .at(-1);
+    const code = /code is (\d{6})/.exec(mail?.text ?? '')?.[1];
+    return this.post('/auth/verify-email', { email: this.email, code }).expect(
+      200,
+    );
   }
 
   login() {

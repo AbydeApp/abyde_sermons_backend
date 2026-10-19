@@ -33,25 +33,20 @@ import { JOB_OBSERVER } from '../../src/shared/infrastructure/queue/job-observer
 import { InMemoryStorageAdapter } from './in-memory-storage.adapter.js';
 import { THROTTLER_STORAGE } from '../../src/composition/tokens.js';
 import { ANALYTICS_QUERY } from '../../src/modules/analytics/application/ports/out/analytics-query.port.js';
-import { USER_REPOSITORY } from '../../src/modules/auth/application/ports/out/user-repository.port.js';
-import {
-  PASSWORD_RESET_REPOSITORY,
-  SESSION_REPOSITORY,
-} from '../../src/modules/auth/application/ports/out/session-repository.port.js';
+import { AUTH_REPOSITORY } from '../../src/modules/auth/auth.repository.js';
 import {
   BILLING_SETTINGS,
   PAYMENT_PROVIDER,
   SUBSCRIPTION_REPOSITORY,
 } from '../../src/modules/billing/application/ports/out/billing.ports.js';
 import { FakePaymentAdapter } from '../../src/modules/billing/infrastructure/providers/fake-payment.adapter.js';
-import { CHURCH_REPOSITORY } from '../../src/modules/church/application/ports/out/church-repository.port.js';
 import {
   CALENDAR_REPOSITORY,
   CONTENT_QUERY,
   CONTENT_REPOSITORY,
   GENERATION_REPOSITORY,
-} from '../../src/modules/content/application/ports/out/content-repository.port.js';
-import { READINESS_CHECKS } from '../../src/modules/health/application/ports/out/readiness-check.port.js';
+} from '../../src/modules/content/content.repository.js';
+import { READINESS_CHECKS } from '../../src/modules/health/helper.js';
 import {
   INTEGRATION_REPOSITORY,
   INTEGRATION_SETTINGS,
@@ -98,33 +93,32 @@ import {
   InMemoryAIUsageRecorder,
   InMemoryAnalyticsQuery,
   InMemoryCalendarRepository,
-  InMemoryChurchRepository,
   InMemoryContentQuery,
   InMemoryContentRepository,
+  InMemoryAuthRepository,
   InMemoryEmbeddingRepository,
   InMemoryGenerationRepository,
   InMemoryIntegrationRepository,
   InMemoryIntelligenceRepository,
   InMemoryLibraryFacets,
-  InMemoryPasswordResetRepository,
   InMemoryPublishingRepository,
   InMemorySermonQuery,
   InMemorySermonRepository,
-  InMemorySessionRepository,
   InMemorySubscriptionRepository,
   InMemoryTranscriptRepository,
   InMemoryUploadRepository,
   InMemoryUsage,
-  InMemoryUserRepository,
 } from './in-memory-repositories.js';
 import { FakeMediaProcessor, FakeOAuthProvider } from './fakes.js';
 import {
-  BRAND_PROFILE_REPOSITORY,
   BRAND_RENDERER,
-  MEDIA_ASSET_REPOSITORY,
   MEDIA_OBSERVER,
   MEDIA_SETTINGS,
-} from '../../src/modules/brand/application/ports/out/brand.ports.js';
+} from '../../src/modules/brand/adapters/ports.js';
+import {
+  BRAND_PROFILE_REPOSITORY,
+  MEDIA_ASSET_REPOSITORY,
+} from '../../src/modules/brand/brand.repository.js';
 import {
   SOCIAL_AUDIT_LOG,
   SOCIAL_CONNECTION_REPOSITORY,
@@ -151,20 +145,6 @@ import {
   FakeSocialAdapter,
   recordingSocialObserver,
 } from './social-fakes.js';
-import {
-  REEL_CANDIDATE_REPOSITORY,
-  REEL_OBSERVER,
-  REEL_RENDERER,
-  REEL_REPOSITORY,
-  REEL_SETTINGS,
-  SPEAKER_TRACKER,
-} from '../../src/modules/reels/application/ports/out/reel.ports.js';
-import {
-  FakeReelRenderer,
-  FakeSpeakerTracker,
-  InMemoryReelCandidateRepository,
-  InMemoryReelRepository,
-} from './in-memory-reels.js';
 
 /** Handles to the in-memory infrastructure so tests can drive queues, time, storage and fakes. */
 export class TestInfrastructure {
@@ -180,8 +160,6 @@ export class TestInfrastructure {
   readonly emailPublisher = new FakePublisher('EMAIL');
   readonly paymentProvider = new FakePaymentAdapter('http://web.test');
   readonly renderer = new FakeBrandRenderer();
-  readonly reelRenderer = new FakeReelRenderer();
-  readonly speakerTracker = new FakeSpeakerTracker();
   readonly socialObserver = recordingSocialObserver();
   readonly social: Record<SocialProviderId, FakeSocialAdapter> = {
     meta: new FakeSocialAdapter('meta'),
@@ -248,10 +226,7 @@ export class TestInfrastructure {
         [new FakeOAuthProvider('META'), new FakeOAuthProvider('EMAIL')],
       ],
       [PUBLISHING_PROVIDERS, [this.metaPublisher, this.emailPublisher]],
-      [USER_REPOSITORY, new InMemoryUserRepository(db)],
-      [SESSION_REPOSITORY, new InMemorySessionRepository(db)],
-      [PASSWORD_RESET_REPOSITORY, new InMemoryPasswordResetRepository(db)],
-      [CHURCH_REPOSITORY, new InMemoryChurchRepository(db)],
+      [AUTH_REPOSITORY, new InMemoryAuthRepository(db)],
       [UPLOAD_REPOSITORY, new InMemoryUploadRepository(db)],
       [SERMON_REPOSITORY, new InMemorySermonRepository(db, clock)],
       [SERMON_QUERY, new InMemorySermonQuery(db)],
@@ -295,18 +270,6 @@ export class TestInfrastructure {
       [
         SOCIAL_PROVIDER_REGISTRY,
         new SocialProviderRegistry(Object.values(this.social)),
-      ],
-      [REEL_REPOSITORY, new InMemoryReelRepository(db, clock)],
-      [REEL_CANDIDATE_REPOSITORY, new InMemoryReelCandidateRepository(db)],
-      [REEL_RENDERER, this.reelRenderer],
-      [SPEAKER_TRACKER, this.speakerTracker],
-      [
-        REEL_SETTINGS,
-        { minSeconds: 15, maxSeconds: 90, hookSeconds: 3, outroSeconds: 2.5 },
-      ],
-      [
-        REEL_OBSERVER,
-        { rendered: () => undefined, candidatesGenerated: () => undefined },
       ],
     ];
     const providers = [

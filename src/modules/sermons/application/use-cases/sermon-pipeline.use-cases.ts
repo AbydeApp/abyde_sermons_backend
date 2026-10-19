@@ -32,11 +32,6 @@ import {
   USAGE_METER,
   type UsageMeterPort,
 } from '../../../../shared/application/ports/usage-meter.port.js';
-import {
-  GENERATE_REEL_CANDIDATES_JOB,
-  type ReelCandidatesJobPayload,
-  reelCandidatesJobId,
-} from '../../../../shared/application/reel-jobs.js';
 import { newId } from '../../../../shared/domain/id.js';
 import { mediaKindOf } from '../../../uploads/domain/upload-policy.js';
 import {
@@ -443,8 +438,6 @@ export class AnalyzeSermonUseCase {
 /** Stage INDEX: embed every transcript segment, then mark the sermon READY. */
 @Injectable()
 export class IndexSermonUseCase {
-  private readonly logger = new Logger(IndexSermonUseCase.name);
-
   constructor(
     @Inject(SermonPipelineSupport)
     private readonly pipeline: SermonPipelineSupport,
@@ -456,7 +449,6 @@ export class IndexSermonUseCase {
     @Inject(LANGUAGE_MODEL) private readonly model: LanguageModelPort,
     @Inject(UNIT_OF_WORK) private readonly uow: UnitOfWorkPort,
     @Inject(CLOCK) private readonly clock: ClockPort,
-    @Inject(QUEUE) private readonly queue: QueuePort,
   ) {}
 
   async execute(payload: SermonJobPayload, context: JobContext): Promise<void> {
@@ -510,33 +502,6 @@ export class IndexSermonUseCase {
         sermon.markReady(this.clock.now());
         await this.pipeline.persist(sermon);
       });
-      if (sermon.sourceType === 'MEDIA')
-        await this.queueReelCandidates(payload);
     });
-  }
-
-  /**
-   * Best effort: the sermon is READY whatever happens here. If the queue is unavailable the church
-   * can still ask for candidates from the Reels screen.
-   */
-  private async queueReelCandidates(payload: SermonJobPayload): Promise<void> {
-    const job: ReelCandidatesJobPayload = {
-      churchId: payload.churchId,
-      sermonId: payload.sermonId,
-      attempt: payload.attempt,
-    };
-    try {
-      await this.queue.enqueue(
-        GENERATE_REEL_CANDIDATES_JOB.queue,
-        GENERATE_REEL_CANDIDATES_JOB.name,
-        job,
-        { jobId: reelCandidatesJobId(job) },
-      );
-    } catch (error) {
-      this.logger.warn(
-        { err: error, sermonId: payload.sermonId },
-        'Failed to queue Reel candidate generation',
-      );
-    }
   }
 }

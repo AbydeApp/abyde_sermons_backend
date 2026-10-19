@@ -11,18 +11,15 @@ import {
   type PageRequest,
   skipFor,
 } from '../../src/shared/domain/pagination.js';
-import { User } from '../../src/modules/auth/domain/user.entity.js';
-import type { UserRepositoryPort } from '../../src/modules/auth/application/ports/out/user-repository.port.js';
-import type {
-  PasswordResetRecord,
-  PasswordResetRepositoryPort,
-  SessionRecord,
-  SessionRepositoryPort,
-} from '../../src/modules/auth/application/ports/out/session-repository.port.js';
-import { emailTaken } from '../../src/modules/auth/application/use-cases/register.use-case.js';
-import { Church } from '../../src/modules/church/domain/church.entity.js';
-import type { ChurchRepositoryPort } from '../../src/modules/church/application/ports/out/church-repository.port.js';
-import { churchExists } from '../../src/modules/church/application/use-cases/church.use-cases.js';
+import { churchExists, emailTaken } from '../../src/modules/auth/helper.js';
+import {
+  type AuthRepository,
+  type ChurchRecord,
+  type EmailVerificationRecord,
+  type PasswordResetRecord,
+  type SessionRecord,
+  type UserRecord,
+} from '../../src/modules/auth/auth.repository.js';
 import type {
   UploadRecord,
   UploadRepositoryPort,
@@ -53,25 +50,23 @@ import type {
   TranscriptSegmentRecord,
 } from '../../src/modules/sermons/domain/sermon-intelligence.js';
 import {
+  CalendarItem,
+  type CalendarRow,
   ContentItem,
   type ContentItemProps,
+  type ContentType,
   type ContentVersionRecord,
-} from '../../src/modules/content/domain/content-item.entity.js';
-import { CalendarItem } from '../../src/modules/content/domain/calendar-item.entity.js';
-import type { ContentType } from '../../src/modules/content/domain/content-types.js';
-import type {
-  GenerationGroupRecord,
-  GenerationJobRecord,
-} from '../../src/modules/content/domain/generation-group.js';
+  type GenerationGroupRecord,
+  type GenerationJobRecord,
+} from '../../src/modules/content/helper.js';
 import type {
   CalendarRepositoryPort,
-  CalendarRow,
   ContentFilter,
   ContentQueryPort,
   ContentRepositoryPort,
   ContentRow,
   GenerationRepositoryPort,
-} from '../../src/modules/content/application/ports/out/content-repository.port.js';
+} from '../../src/modules/content/content.repository.js';
 import type { UsageQueryPort } from '../../src/modules/usage/application/ports/out/usage-query.port.js';
 import type { SubscriptionRecord } from '../../src/modules/billing/domain/subscription.js';
 import type { SubscriptionRepositoryPort } from '../../src/modules/billing/application/ports/out/billing.ports.js';
@@ -99,35 +94,95 @@ import type { InMemoryDb, TestClock } from './in-memory-db.js';
 const clone = <T>(value: T): T => structuredClone(value);
 const values = <T>(map: Map<string, T>): T[] => [...map.values()];
 
-export class InMemoryUserRepository implements UserRepositoryPort {
+export class InMemoryAuthRepository implements AuthRepository {
   constructor(private readonly db: InMemoryDb) {}
 
-  async findById(id: string) {
+  async findUserById(id: string): Promise<UserRecord | null> {
     const row = this.db.users.get(id);
-    return row ? User.restore(clone(row)) : null;
+    return row ? clone(row) : null;
   }
 
-  async findByEmail(email: string) {
+  async findUserByEmail(email: string): Promise<UserRecord | null> {
     const row = values(this.db.users).find((user) => user.email === email);
-    return row ? User.restore(clone(row)) : null;
+    return row ? clone(row) : null;
   }
 
-  async save(user: User) {
-    const props = user.snapshot();
+  async saveUser(user: UserRecord) {
     if (
       values(this.db.users).some(
-        (other) => other.email === props.email && other.id !== props.id,
+        (other) => other.email === user.email && other.id !== user.id,
       )
     )
       throw emailTaken();
-    this.db.users.set(props.id, clone(props));
+    this.db.users.set(user.id, clone(user));
   }
-}
 
-export class InMemorySessionRepository implements SessionRepositoryPort {
-  constructor(private readonly db: InMemoryDb) {}
+  async findChurchById(id: string) {
+    const row = this.db.churches.get(id);
+    return row ? clone(row) : null;
+  }
 
-  async create(session: {
+  async findChurchByUserId(userId: string) {
+    const row = values(this.db.churches).find(
+      (church) => church.userId === userId,
+    );
+    return row ? clone(row) : null;
+  }
+
+  async findChurchIdByUserId(userId: string) {
+    return (
+      values(this.db.churches).find((church) => church.userId === userId)?.id ??
+      null
+    );
+  }
+
+  async churchSlugExists(slug: string) {
+    return values(this.db.churches).some((church) => church.slug === slug);
+  }
+
+  async saveChurch(church: ChurchRecord) {
+    if (
+      values(this.db.churches).some(
+        (other) =>
+          other.id !== church.id &&
+          (other.userId === church.userId || other.slug === church.slug),
+      )
+    )
+      throw churchExists();
+    this.db.churches.set(church.id, clone(church));
+  }
+
+  async saveEmailVerification(
+    record: Omit<EmailVerificationRecord, 'attempts'>,
+  ) {
+    this.db.emailVerifications.set(record.userId, { ...record, attempts: 0 });
+  }
+
+  async findEmailVerification(userId: string) {
+    const row = this.db.emailVerifications.get(userId);
+    return row ? clone(row) : null;
+  }
+
+  async recordFailedVerification(userId: string) {
+    const row = this.db.emailVerifications.get(userId);
+    if (!row) return 0;
+    row.attempts += 1;
+    return row.attempts;
+  }
+
+  async deleteEmailVerification(userId: string) {
+    this.db.emailVerifications.delete(userId);
+  }
+
+  async deleteExpiredEmailVerifications(cutoff: Date) {
+    let deleted = 0;
+    for (const [id, row] of this.db.emailVerifications)
+      if (row.expiresAt < cutoff && this.db.emailVerifications.delete(id))
+        deleted++;
+    return deleted;
+  }
+
+  async createSession(session: {
     id: string;
     userId: string;
     tokenHash: string;
@@ -146,24 +201,37 @@ export class InMemorySessionRepository implements SessionRepositoryPort {
     });
   }
 
-  async findByTokenHash(tokenHash: string): Promise<SessionRecord | null> {
+  async findSessionByTokenHash(tokenHash: string): Promise<SessionRecord | null> {
     const row = values(this.db.sessions).find(
       (session) => session.tokenHash === tokenHash,
     );
     return row ? clone(row) : null;
   }
 
-  async touch(id: string, at: Date) {
+  async rotateSession(
+    id: string,
+    currentTokenHash: string,
+    nextTokenHash: string,
+    at: Date,
+  ) {
     const row = this.db.sessions.get(id);
-    if (row && !row.revokedAt) row.lastSeenAt = at;
+    if (!row || row.revokedAt || row.tokenHash !== currentTokenHash)
+      return false;
+    row.tokenHash = nextTokenHash;
+    row.lastSeenAt = at;
+    return true;
   }
 
-  async revoke(id: string, at: Date) {
+  async revokeSession(id: string, at: Date) {
     const row = this.db.sessions.get(id);
     if (row && !row.revokedAt) row.revokedAt = at;
   }
 
-  async revokeAllForUser(userId: string, at: Date, exceptSessionId?: string) {
+  async revokeAllSessionsForUser(
+    userId: string,
+    at: Date,
+    exceptSessionId?: string,
+  ) {
     const revoked: string[] = [];
     for (const row of this.db.sessions.values()) {
       if (
@@ -172,47 +240,43 @@ export class InMemorySessionRepository implements SessionRepositoryPort {
         row.id !== exceptSessionId
       ) {
         row.revokedAt = at;
-        revoked.push(row.tokenHash);
+        revoked.push(row.id);
       }
     }
     return revoked;
   }
 
-  async deleteExpiredBefore(cutoff: Date) {
+  async deleteExpiredSessions(cutoff: Date) {
     let deleted = 0;
     for (const [id, row] of this.db.sessions)
       if (row.expiresAt < cutoff && this.db.sessions.delete(id)) deleted++;
     return deleted;
   }
-}
 
-export class InMemoryPasswordResetRepository implements PasswordResetRepositoryPort {
-  constructor(private readonly db: InMemoryDb) {}
-
-  async create(record: Omit<PasswordResetRecord, 'usedAt'>) {
+  async createPasswordReset(record: Omit<PasswordResetRecord, 'usedAt'>) {
     this.db.passwordResets.set(record.id, { ...record, usedAt: null });
   }
 
-  async findByTokenHash(tokenHash: string) {
+  async findPasswordResetByTokenHash(tokenHash: string) {
     const row = values(this.db.passwordResets).find(
       (reset) => reset.tokenHash === tokenHash,
     );
     return row ? clone(row) : null;
   }
 
-  async consume(id: string, at: Date) {
+  async consumePasswordReset(id: string, at: Date) {
     const row = this.db.passwordResets.get(id);
     if (!row || row.usedAt) return false;
     row.usedAt = at;
     return true;
   }
 
-  async invalidateAllForUser(userId: string, at: Date) {
+  async invalidatePasswordResetsForUser(userId: string, at: Date) {
     for (const row of this.db.passwordResets.values())
       if (row.userId === userId && !row.usedAt) row.usedAt = at;
   }
 
-  async deleteExpiredBefore(cutoff: Date) {
+  async deleteExpiredPasswordResets(cutoff: Date) {
     let deleted = 0;
     for (const [id, row] of this.db.passwordResets)
       if (row.expiresAt < cutoff && this.db.passwordResets.delete(id))
@@ -221,45 +285,6 @@ export class InMemoryPasswordResetRepository implements PasswordResetRepositoryP
   }
 }
 
-export class InMemoryChurchRepository implements ChurchRepositoryPort {
-  constructor(private readonly db: InMemoryDb) {}
-
-  async findById(id: string) {
-    const row = this.db.churches.get(id);
-    return row ? Church.restore(clone(row)) : null;
-  }
-
-  async findByUserId(userId: string) {
-    const row = values(this.db.churches).find(
-      (church) => church.userId === userId,
-    );
-    return row ? Church.restore(clone(row)) : null;
-  }
-
-  async findIdByUserId(userId: string) {
-    return (
-      values(this.db.churches).find((church) => church.userId === userId)?.id ??
-      null
-    );
-  }
-
-  async slugExists(slug: string) {
-    return values(this.db.churches).some((church) => church.slug === slug);
-  }
-
-  async save(church: Church) {
-    const props = church.snapshot();
-    if (
-      values(this.db.churches).some(
-        (other) =>
-          other.id !== props.id &&
-          (other.userId === props.userId || other.slug === props.slug),
-      )
-    )
-      throw churchExists();
-    this.db.churches.set(props.id, clone(props));
-  }
-}
 
 export class InMemoryUploadRepository implements UploadRepositoryPort {
   constructor(private readonly db: InMemoryDb) {}
@@ -316,10 +341,6 @@ function cascadeDeleteSermon(db: InMemoryDb, sermonId: string): void {
     if (row.sermonId === sermonId) db.generationJobs.delete(id);
   for (const [id, row] of db.contentItems)
     if (row.sermonId === sermonId) cascadeDeleteContent(db, id);
-  for (const [id, row] of db.reels)
-    if (row.sermonId === sermonId) db.reels.delete(id);
-  for (const [id, row] of db.reelCandidates)
-    if (row.sermonId === sermonId) db.reelCandidates.delete(id);
 }
 
 function cascadeDeleteContent(db: InMemoryDb, contentItemId: string): void {
@@ -935,6 +956,15 @@ export class InMemoryContentQuery implements ContentQueryPort {
       )
       .filter((item) => !filter.type || item.type === filter.type)
       .filter((item) => !filter.sermonId || item.sermonId === filter.sermonId)
+      .filter(
+        (item) =>
+          !filter.generationId ||
+          values(this.db.generationJobs).some(
+            (job) =>
+              job.groupId === filter.generationId &&
+              job.id === item.generationJobId,
+          ),
+      )
       .filter(
         (item) =>
           !filter.q ||

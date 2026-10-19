@@ -56,15 +56,6 @@ export const QUEUE_POLICIES: Record<QueueName, QueuePolicy> = {
   'social-status': { attempts: 3, backoffMs: 30_000, timeoutMs: 2 * MINUTE },
   'social-metrics': { attempts: 1, backoffMs: 0, timeoutMs: 5 * MINUTE },
   'token-maintenance': { attempts: 1, backoffMs: 0, timeoutMs: 5 * MINUTE },
-  // One structured model call over the sermon's sentences.
-  'reel-candidates': { attempts: 4, backoffMs: 15_000, timeoutMs: 5 * MINUTE },
-  // Download, speaker tracking and one encode; like video-render, one at a time per process.
-  'reel-render': {
-    attempts: 2,
-    backoffMs: 60_000,
-    timeoutMs: 25 * MINUTE,
-    maxConcurrency: 1,
-  },
 };
 
 export const LONGEST_JOB_TIMEOUT_MS = Math.max(

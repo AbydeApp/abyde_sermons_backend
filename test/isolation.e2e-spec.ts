@@ -130,8 +130,6 @@ describe('cross-church isolation (e2e)', () => {
       })
       .expect(422);
     expect(attempt.body.code).toBe('UPLOAD_NOT_FOUND');
-    const logo = await a.patch('/church', { logoObjectKey: bKey }).expect(422);
-    expect(logo.body.code).toBe('UPLOAD_NOT_FOUND');
   });
 
   it('Church A cannot access Church B calendar item', async () => {

@@ -46,7 +46,7 @@ export interface SubscriptionView {
   priceLabel: string;
   status: SubscriptionStatus;
   currentPeriodEnd: Date;
-  /** What the plan unlocks, so the web app can show or hide Reel features. */
+  /** Features available on the current plan. */
   features: PlanFeatures;
 }
 
@@ -54,8 +54,6 @@ export interface UsageView {
   sermonsUsed: number;
   sermonsLimit: number;
   contentGenerated: number;
-  reelsUsed: number;
-  reelsLimit: number;
   periodEnd: Date;
 }
 
@@ -91,18 +89,10 @@ export class EntitlementService implements PlanEntitlementsPort {
       entitlement.periodStart,
       entitlement.periodEnd,
     );
-    const reelsUsed = await this.usage.total(
-      churchId,
-      'REEL_RENDERED',
-      entitlement.periodStart,
-      entitlement.periodEnd,
-    );
     return {
       sermonsUsed,
       sermonsLimit: entitlement.plan.sermonsPerPeriod,
       contentGenerated,
-      reelsUsed,
-      reelsLimit: entitlement.plan.reelsPerPeriod,
       periodEnd: entitlement.periodEnd,
     };
   }
@@ -114,16 +104,6 @@ export class EntitlementService implements PlanEntitlementsPort {
       planName: plan.name,
       periodStart,
       periodEnd,
-      reelsPerPeriod: plan.reelsPerPeriod,
-      reelsUsed: await this.usage.total(
-        churchId,
-        'REEL_RENDERED',
-        periodStart,
-        periodEnd,
-      ),
-      reelHooks: plan.reelHooks,
-      animatedCaptions: plan.animatedCaptions,
-      priorityProcessing: plan.priorityProcessing,
       sourceRetentionDays: plan.sourceRetentionDays,
     };
   }
@@ -145,10 +125,6 @@ export class GetSubscriptionUseCase {
       status: entitlement.status,
       currentPeriodEnd: entitlement.periodEnd,
       features: {
-        reelsPerPeriod: entitlement.plan.reelsPerPeriod,
-        reelHooks: entitlement.plan.reelHooks,
-        animatedCaptions: entitlement.plan.animatedCaptions,
-        priorityProcessing: entitlement.plan.priorityProcessing,
         sourceRetentionDays: entitlement.plan.sourceRetentionDays,
       },
     };

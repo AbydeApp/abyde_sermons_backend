@@ -16,13 +16,11 @@ import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { BillingModule } from './modules/billing/billing.module.js';
 import { BrandModule } from './modules/brand/brand.module.js';
-import { ChurchModule } from './modules/church/church.module.js';
 import { ContentModule } from './modules/content/content.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { IntegrationsModule } from './modules/integrations/integrations.module.js';
 import { LibraryModule } from './modules/library/library.module.js';
 import { PublishingModule } from './modules/publishing/publishing.module.js';
-import { ReelsModule } from './modules/reels/reels.module.js';
 import { SermonsModule } from './modules/sermons/sermons.module.js';
 import { SocialModule } from './modules/social/social.module.js';
 import { SystemModule } from './modules/system/system.module.js';
@@ -58,7 +56,6 @@ export const PRODUCTION_INFRASTRUCTURE: ModuleRef[] = [
 
 const BUSINESS_MODULES: ModuleRef[] = [
   AuthModule,
-  ChurchModule,
   UploadsModule,
   SermonsModule,
   ContentModule,
@@ -68,7 +65,6 @@ const BUSINESS_MODULES: ModuleRef[] = [
   PublishingModule,
   BrandModule,
   SocialModule,
-  ReelsModule,
   AnalyticsModule,
   HealthModule,
   SystemModule,

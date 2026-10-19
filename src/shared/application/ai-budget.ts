@@ -10,10 +10,6 @@ export const AI_BUDGETS = {
   edit: { limit: 120, windowSeconds: 3600 },
   /** "Generate My Week" requests (each fans out to up to eight model calls). */
   generateWeek: { limit: 30, windowSeconds: 3600 },
-  /** Reel hook suggestions. */
-  reelHooks: { limit: 60, windowSeconds: 3600 },
-  /** Re-running Reel candidate selection for a sermon (one large model call each). */
-  reelCandidates: { limit: 10, windowSeconds: 3600 },
 } as const;
 
 export async function assertAIBudget(

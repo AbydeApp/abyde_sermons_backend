@@ -60,15 +60,20 @@ describe('social publishing (e2e)', () => {
       .expect(202);
     await t.infra.queue.drain();
     contentId = (await a.get(`/content?sermonId=${sermonId}`)).body.data[0].id;
-    const image = await a
+    await a
       .post(`/content/${contentId}/render`, { format: 'image' })
       .expect(202);
-    const carousel = await a
+    await a
       .post(`/content/${contentId}/render`, { format: 'carousel' })
       .expect(202);
     await t.infra.queue.drain();
-    imageId = image.body.assets[0].id;
-    slideIds = carousel.body.assets.map((asset: { id: string }) => asset.id);
+    const media = (await a.get(`/content/${contentId}/media`).expect(200))
+      .body as Array<{ id: string; kind: string; position: number }>;
+    imageId = media.find((asset) => asset.kind === 'IMAGE')?.id ?? '';
+    slideIds = media
+      .filter((asset) => asset.kind === 'CAROUSEL_SLIDE')
+      .sort((x, y) => x.position - y.position)
+      .map((asset) => asset.id);
   });
   afterAll(() => t.close());
 

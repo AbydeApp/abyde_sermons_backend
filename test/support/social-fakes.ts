@@ -7,8 +7,8 @@ import type {
   RenderImageInput,
   RenderThumbnailInput,
   RenderVideoInput,
-} from '../../src/modules/brand/application/ports/out/brand.ports.js';
-import { renderCardSvg } from '../../src/modules/brand/domain/template-svg.js';
+} from '../../src/modules/brand/adapters/ports.js';
+import { renderCardSvg } from '../../src/modules/brand/adapters/template-svg.js';
 import type {
   AuthorizationCallbackInput,
   AuthorizationInput,

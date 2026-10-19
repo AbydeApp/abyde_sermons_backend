@@ -170,65 +170,6 @@ export class FakeLanguageModel implements LanguageModelPort {
               citedExcerpts: [],
             };
       }
-      case 'reel_candidates': {
-        // Consecutive, non-overlapping ~35 s windows of whole sentences.
-        const sentences = (input.sentences ?? []) as Array<{
-          index: number;
-          text: string;
-          startMs: number;
-          endMs: number;
-        }>;
-        const targetMs =
-          ((Number(input.minSeconds ?? 15) + Number(input.maxSeconds ?? 90)) /
-            2.5) *
-          1000;
-        const candidates: unknown[] = [];
-        let start = 0;
-        while (start < sentences.length && candidates.length < 8) {
-          let end = start;
-          while (
-            end + 1 < sentences.length &&
-            (sentences[end]?.endMs ?? 0) - (sentences[start]?.startMs ?? 0) <
-              targetMs
-          )
-            end += 1;
-          const n = candidates.length;
-          candidates.push({
-            startSentence: start,
-            endSentence: end,
-            title: firstSentence(sentences[start]?.text ?? 'Moment').slice(
-              0,
-              60,
-            ),
-            reason: 'A complete thought that stands on its own.',
-            standalone: 6 + (n % 4),
-            impact: 9 - (n % 3),
-            quotability: 5 + (n % 5),
-            contextIndependence: 7,
-          });
-          start = end + 1;
-        }
-        return { candidates };
-      }
-      case 'reel_hooks': {
-        const excerpt = str(input.excerpt, 'Walk by faith');
-        const lead = firstSentence(excerpt)
-          .replace(/[.!?]+$/, '')
-          .split(/\s+/)
-          .slice(0, 8)
-          .join(' ');
-        const style = str(input.preferredStyle, 'IMPACT');
-        return {
-          hooks: [
-            { text: lead || 'Walk by faith', style },
-            {
-              text: `What happens when you ${lead.toLowerCase()}?`,
-              style: 'QUESTION',
-            },
-            { text: 'One step at a time', style: 'MINIMAL' },
-          ],
-        };
-      }
       default:
         throw new InvalidModelOutputError(
           schemaName,

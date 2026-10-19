@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { ShutdownDrain } from '../src/modules/health/application/shutdown-drain.js';
+import { HealthService } from '../src/modules/health/health.service.js';
 import { Client, createTestApp, type TestApp } from './support/test-app.js';
 
 describe('HTTP security and conventions (e2e)', () => {
@@ -216,7 +216,7 @@ describe('HTTP security and conventions (e2e)', () => {
       await request(draining.app.getHttpServer())
         .get('/health/ready')
         .expect(200);
-      await draining.app.get(ShutdownDrain).beforeApplicationShutdown();
+      await draining.app.get(HealthService).beforeApplicationShutdown();
       const ready = await request(draining.app.getHttpServer())
         .get('/health/ready')
         .expect(503);

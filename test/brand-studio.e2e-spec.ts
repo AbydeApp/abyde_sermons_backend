@@ -1,6 +1,6 @@
 import { Client, createTestApp, type TestApp } from './support/test-app.js';
 
-/** Brand Studio: profile, logo assets, templates, preview and the queued media pipeline. */
+/** Brand Studio: profile, logo assets and the queued media pipeline. */
 describe('brand studio and media pipeline (e2e)', () => {
   let t: TestApp;
   let a: Client;
@@ -66,24 +66,28 @@ describe('brand studio and media pipeline (e2e)', () => {
       primaryColor: '#1F2A44',
       headingFont: 'Inter',
       watermarkEnabled: false,
-      logo: null,
+      churchId: churchA,
+      logoAssetId: null,
+      alternateLogoAssetId: null,
+      watermarkPosition: 'bottom-right',
+      footerText: null,
+      assets: [],
       voice: { emojiUsage: 'rarely', preferredTerms: [], avoidPhrases: [] },
     });
-    expect(profile.body).not.toHaveProperty('churchId');
   });
 
   it('validates and saves brand and voice', async () => {
-    // Unknown keys are rejected, not silently stored.
-    const invalid = await a
-      .put('/brand-studio', { primaryColor: '#000000', extra: true })
-      .expect(422);
-    expect(JSON.stringify(invalid.body.errors)).toContain('extra');
     await a.put('/brand-studio', { primaryColor: 'blue' }).expect(422);
+    // Read-only keys the client echoes back are ignored, not stored.
+    await a
+      .put('/brand-studio', { primaryColor: '#000000', assets: [], logoUrl: 'x' })
+      .expect(200);
     const saved = await a
       .put('/brand-studio', {
         primaryColor: '#0a3d62',
         accentColor: '#f6b93b',
         socialHandle: 'gracechapel',
+        footerText: 'Join us Sundays at 9',
         voice: {
           tone: 'Warm and hopeful',
           preferredTerms: [
@@ -96,6 +100,7 @@ describe('brand studio and media pipeline (e2e)', () => {
     expect(saved.body).toMatchObject({
       primaryColor: '#0A3D62',
       socialHandle: '@gracechapel',
+      footerText: 'Join us Sundays at 9',
       voice: { tone: 'Warm and hopeful', hashtagPreferences: ['#GraceChapel'] },
     });
     expect((await a.get('/brand-studio')).body.primaryColor).toBe('#0A3D62');
@@ -109,11 +114,20 @@ describe('brand studio and media pipeline (e2e)', () => {
         sizeBytes: 10,
       })
       .expect(422);
+    await a
+      .post('/brand-studio/assets/presign', {
+        fileName: 'portrait.png',
+        contentType: 'image/png',
+        sizeBytes: 10,
+        kind: 'PORTRAIT',
+      })
+      .expect(422);
     const presign = await a
       .post('/brand-studio/assets/presign', {
         fileName: 'logo.png',
         contentType: 'image/png',
         sizeBytes: 4,
+        kind: 'LOGO',
       })
       .expect(200);
     expect(presign.body.objectKey).toBe(
@@ -133,74 +147,48 @@ describe('brand studio and media pipeline (e2e)', () => {
       'image/png',
     );
     const saved = await a.put('/brand-studio', attach).expect(200);
-    expect(saved.body.logo).toEqual({
-      assetId: presign.body.assetId,
-      url: expect.stringContaining('memory://download'),
+    expect(saved.body.logoAssetId).toBe(presign.body.assetId);
+    expect(saved.body.assets).toEqual([
+      {
+        id: presign.body.assetId,
+        kind: 'LOGO',
+        name: 'logo.png',
+        url: expect.stringContaining('memory://download'),
+        createdAt: expect.any(String),
+      },
+    ]);
+    expect((await b.get('/brand-studio')).body).toMatchObject({
+      logoAssetId: null,
+      assets: [],
     });
-    expect((await b.get('/brand-studio')).body.logo).toBeNull();
-  });
-
-  it('lists templates, sets defaults per content type, and previews without rendering', async () => {
-    const catalog = await a.get('/brand-studio/templates').expect(200);
-    expect(
-      catalog.body.templates.map((tpl: { id: string }) => tpl.id),
-    ).toContain('gradient-quote');
-    await a
-      .put('/brand-studio/templates/quote/default', { templateId: 'nope' })
-      .expect(422);
-    await a
-      .put('/brand-studio/templates/sermon/default', {
-        templateId: 'gradient-quote',
-      })
-      .expect(404);
-    await a
-      .put('/brand-studio/templates/quote/default', {
-        templateId: 'gradient-quote',
-      })
-      .expect(200);
-    expect((await a.get('/brand-studio/templates')).body.defaults).toEqual({
-      QUOTE: 'gradient-quote',
-    });
-
-    const preview = await a
-      .post('/brand-studio/preview', {
-        text: 'Faith <over> fear',
-        aspect: 'portrait',
-        brand: { accentColor: '#FF0000' },
-      })
-      .expect(200);
-    expect(preview.body).toMatchObject({ width: 1080, height: 1350 });
-    expect(preview.body.svg).toContain('Faith &lt;over&gt; fear');
-    expect(preview.body.svg).toContain('#FF0000');
-    expect(preview.body.logo).toMatchObject({
-      url: expect.any(String),
-      width: expect.any(Number),
-    });
-    // Previewing does not save anything.
-    expect((await a.get('/brand-studio')).body.accentColor).toBe('#F6B93B');
   });
 
   it('queues image and carousel renders and stores them under the sermon', async () => {
     const accepted = await a
       .post(`/content/${quoteId}/render`, { format: 'image' })
       .expect(202);
+    // The response is the content item, whose `visual` the client polls.
     expect(accepted.body).toMatchObject({
-      status: 'rendering',
-      assets: [{ kind: 'IMAGE', status: 'PENDING', url: null }],
+      id: quoteId,
+      visual: { status: 'RENDERING', assets: [], thumbnailUrl: null },
     });
     expect(t.infra.renderer.images).toHaveLength(0); // nothing rendered in the request
     await t.infra.queue.drain();
+    const rendered = await a.get(`/content/${quoteId}`).expect(200);
+    expect(rendered.body.visual).toMatchObject({
+      status: 'READY',
+      assets: [{ kind: 'image', width: 1080, url: expect.any(String) }],
+    });
     const image = await a
-      .get(`/media/${accepted.body.assets[0].id}`)
+      .get(`/media/${rendered.body.visual.assets[0].id}`)
       .expect(200);
     expect(image.body).toMatchObject({
       status: 'READY',
       contentType: 'image/jpeg',
       width: 1080,
-      url: expect.any(String),
     });
     const card = t.infra.renderer.images[0];
-    expect(card?.card.template.id).toBe('gradient-quote'); // the church default for quotes
+    expect(card?.card.template.id).toEqual(expect.any(String));
     expect(card?.card.brand).toMatchObject({
       primaryColor: '#0A3D62',
       logoObjectKey: expect.stringContaining('/brand/'),
@@ -214,6 +202,7 @@ describe('brand studio and media pipeline (e2e)', () => {
       new RegExp(`^churches/${churchA}/sermons/[^/]+/generated/images/`),
     );
 
+    t.infra.clock.advance(1000); // renders are told apart by their creation time
     const carousel = await a
       .post(`/content/${quoteId}/render`, {
         format: 'carousel',
@@ -221,25 +210,54 @@ describe('brand studio and media pipeline (e2e)', () => {
         aspect: 'portrait',
       })
       .expect(202);
-    expect(carousel.body.assets.length).toBeGreaterThanOrEqual(2);
+    expect(carousel.body.visual.status).toBe('RENDERING');
     await t.infra.queue.drain();
+    const slides = (await a.get(`/content/${quoteId}`)).body.visual;
+    expect(slides.status).toBe('READY');
+    expect(slides.assets.length).toBeGreaterThanOrEqual(2);
     const media = await a.get(`/content/${quoteId}/media`).expect(200);
     expect(
       media.body.every((asset: { status: string }) => asset.status === 'READY'),
     ).toBe(true);
   });
 
+  it('accepts the web app\'s format names and text overrides', async () => {
+    t.infra.clock.advance(1000);
+    await a
+      .post(`/content/${quoteId}/render`, {
+        format: 'story',
+        overrides: { headline: 'Sunday', body: 'Come as you are' },
+      })
+      .expect(202);
+    await t.infra.queue.drain();
+    const card = t.infra.renderer.images.at(-1)?.card;
+    expect(card).toMatchObject({
+      width: 1080,
+      height: 1920,
+      heading: 'Sunday',
+      text: 'Come as you are',
+    });
+    await a
+      .post(`/content/${quoteId}/render`, { format: 'tiktok' })
+      .expect(422);
+  });
+
   it('cuts a captioned vertical clip and a thumbnail from a video sermon in the worker', async () => {
+    t.infra.clock.advance(1000);
     const accepted = await a
       .post(`/content/${quoteId}/render`, {
         format: 'video',
         clip: { startMs: 10_000, endMs: 40_000 },
       })
       .expect(202);
-    expect(
-      accepted.body.assets.map((asset: { kind: string }) => asset.kind),
-    ).toEqual(['VIDEO', 'THUMBNAIL']);
+    expect(accepted.body.visual.status).toBe('RENDERING');
     await t.infra.queue.drain();
+    const done = (await a.get(`/content/${quoteId}`)).body.visual;
+    expect(done).toMatchObject({
+      status: 'READY',
+      assets: [{ kind: 'video', width: 1080, height: 1920 }],
+      thumbnailUrl: expect.any(String),
+    });
     const video = t.infra.renderer.videos.at(-1);
     expect(video).toMatchObject({
       startMs: 10_000,
@@ -248,17 +266,12 @@ describe('brand studio and media pipeline (e2e)', () => {
       height: 1920,
     });
     expect(video?.captions.length).toBeGreaterThan(0);
-    const clip = await a
-      .get(`/media/${accepted.body.assets[0].id}`)
-      .expect(200);
+    const clip = await a.get(`/media/${done.assets[0].id}`).expect(200);
     expect(clip.body).toMatchObject({
       status: 'READY',
       contentType: 'video/mp4',
       durationMs: 30_000,
     });
-    expect(
-      (await a.get(`/media/${accepted.body.assets[1].id}`)).body.status,
-    ).toBe('READY');
     await a
       .post(`/content/${quoteId}/render`, {
         format: 'image',
@@ -275,16 +288,16 @@ describe('brand studio and media pipeline (e2e)', () => {
 
   it('marks a failed render as failed instead of leaving it pending', async () => {
     t.infra.renderer.failVideos = true;
-    const accepted = await a.post(`/content/${quoteId}/render`, {
-      format: 'video',
-      clip: { startMs: 0, endMs: 20_000 },
-    });
+    t.infra.clock.advance(1000);
+    await a
+      .post(`/content/${quoteId}/render`, {
+        format: 'video',
+        clip: { startMs: 0, endMs: 20_000 },
+      })
+      .expect(202);
     await t.infra.queue.drain();
     t.infra.renderer.failVideos = false;
-    const clip = await a
-      .get(`/media/${accepted.body.assets[0].id}`)
-      .expect(200);
-    expect(clip.body).toMatchObject({
+    expect((await a.get(`/content/${quoteId}`)).body.visual).toMatchObject({
       status: 'FAILED',
       errorMessage: expect.any(String),
     });
@@ -307,12 +320,15 @@ describe('brand studio and media pipeline (e2e)', () => {
   });
 
   it('deletes logo assets idempotently and detaches them from the profile', async () => {
-    const assetId = (await a.get('/brand-studio')).body.logo.assetId as string;
+    const assetId = (await a.get('/brand-studio')).body.logoAssetId as string;
     await b.delete(`/brand-studio/assets/${assetId}`).expect(204); // a no-op for another church
-    expect((await a.get('/brand-studio')).body.logo).not.toBeNull();
+    expect((await a.get('/brand-studio')).body.logoAssetId).not.toBeNull();
     await a.delete(`/brand-studio/assets/${assetId}`).expect(204);
     await a.delete(`/brand-studio/assets/${assetId}`).expect(204);
-    expect((await a.get('/brand-studio')).body.logo).toBeNull();
+    expect((await a.get('/brand-studio')).body).toMatchObject({
+      logoAssetId: null,
+      assets: [],
+    });
     expect(
       [...t.infra.storage.objects.keys()].some((key) => key.includes(assetId)),
     ).toBe(false);

@@ -9,12 +9,6 @@ export interface PlanAllowance {
   planName: string;
   periodStart: Date;
   periodEnd: Date;
-  reelsPerPeriod: number;
-  /** Reels whose render completed in this period. */
-  reelsUsed: number;
-  reelHooks: boolean;
-  animatedCaptions: boolean;
-  priorityProcessing: boolean;
   sourceRetentionDays: number;
 }
 

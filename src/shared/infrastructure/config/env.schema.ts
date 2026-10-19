@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+/** Public development default; rejected in staging and production. */
+export const DEV_ACCESS_TOKEN_SECRET = 'dev-only-access-token-secret-change-me-in-real-envs';
+
 const booleanString = z
   .enum(['true', 'false'])
   .transform((value) => value === 'true');
@@ -66,6 +69,9 @@ export const envSchema = z
     AUTH_COOKIE_NAME: z.string().default('abyde_session'),
     AUTH_COOKIE_DOMAIN: optionalString,
     AUTH_COOKIE_SECURE: booleanString.optional(),
+    // HMAC secret that signs access tokens; production/staging must set their own.
+    AUTH_ACCESS_TOKEN_SECRET: z.string().min(32).default(DEV_ACCESS_TOKEN_SECRET),
+    AUTH_ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(15),
     AUTH_SESSION_TTL_HOURS: z.coerce.number().int().positive().default(24),
     AUTH_REMEMBER_TTL_DAYS: z.coerce.number().int().positive().default(30),
     AUTH_RESET_TOKEN_TTL_MINUTES: z.coerce
@@ -177,26 +183,6 @@ export const envSchema = z
       .min(5)
       .max(600)
       .default(180),
-    // Reels: allowed length of a sermon moment, hook and outro card durations.
-    MEDIA_REEL_MIN_SECONDS: z.coerce.number().int().min(5).max(120).default(15),
-    MEDIA_REEL_MAX_SECONDS: z.coerce
-      .number()
-      .int()
-      .min(10)
-      .max(180)
-      .default(90),
-    MEDIA_REEL_HOOK_SECONDS: z.coerce.number().min(1).max(10).default(3),
-    MEDIA_REEL_OUTRO_SECONDS: z.coerce.number().min(1).max(10).default(2.5),
-    // Smart vertical crop: `center` (steady centre frame) or `command` (external tracker, e.g.
-    // `python3 scripts/speaker-tracking/track_speaker.py`). Failures fall back to centre.
-    MEDIA_SPEAKER_TRACKER: z.enum(['center', 'command']).default('center'),
-    MEDIA_SPEAKER_TRACKER_COMMAND: optionalString,
-    MEDIA_SPEAKER_TRACKER_TIMEOUT_MS: z.coerce
-      .number()
-      .int()
-      .positive()
-      .default(180_000),
-    MEDIA_SPEAKER_TRACKER_FPS: z.coerce.number().min(0.5).max(10).default(2),
 
     // OBSERVABILITY_*
     OBSERVABILITY_METRICS_TOKEN: optionalString,
@@ -211,10 +197,6 @@ export const envSchema = z
     const require = (condition: boolean, path: string, message: string) => {
       if (condition) ctx.addIssue({ code: 'custom', path: [path], message });
     };
-    require(env.MEDIA_SPEAKER_TRACKER === 'command' &&
-      !env.MEDIA_SPEAKER_TRACKER_COMMAND, 'MEDIA_SPEAKER_TRACKER_COMMAND', 'required when MEDIA_SPEAKER_TRACKER=command');
-    require(env.MEDIA_REEL_MIN_SECONDS >=
-      env.MEDIA_REEL_MAX_SECONDS, 'MEDIA_REEL_MIN_SECONDS', 'must be below MEDIA_REEL_MAX_SECONDS');
     require(env.AI_PROVIDER === 'openai' &&
       !env.AI_OPENAI_API_KEY, 'AI_OPENAI_API_KEY', 'required when AI_PROVIDER=openai');
     require(env.TRANSCRIPTION_PROVIDER === 'openai' &&
@@ -290,6 +272,8 @@ export const envSchema = z
       }
       require(env.DATABASE_EXPECTED_PROCESSES ===
         undefined, 'DATABASE_EXPECTED_PROCESSES', `is required in ${env.APP_ENV} (peak process count, for the connection budget check)`);
+      require(env.AUTH_ACCESS_TOKEN_SECRET ===
+        DEV_ACCESS_TOKEN_SECRET, 'AUTH_ACCESS_TOKEN_SECRET', `must be set explicitly in ${env.APP_ENV}`);
       require(env.AUTH_COOKIE_SECURE ===
         false, 'AUTH_COOKIE_SECURE', `must not be false in ${env.APP_ENV}`);
       require(env.BILLING_PROVIDER ===

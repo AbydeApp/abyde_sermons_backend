@@ -1,32 +1,33 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import type { ChurchAIProfile } from '../../../../shared/application/church-profile.js';
+import type { ChurchAIProfile } from '../../../shared/application/church-profile.js';
 import {
   LANGUAGE_MODEL,
   type LanguageModelPort,
-} from '../../../../shared/application/ports/language-model.port.js';
+} from '../../../shared/application/ports/language-model.port.js';
 import {
   formatReference,
   parseReference,
   verifyReference,
-} from '../../../../shared/domain/scripture/scripture.js';
+} from '../../../shared/domain/scripture/scripture.js';
 import {
   isVerbatimExcerpt,
   normalizeForComparison,
-} from '../../../../shared/domain/text.js';
+} from '../../../shared/domain/text.js';
 import {
   buildTranscriptContext,
   GUARDRAILS,
-} from '../../../sermons/application/services/prompt-context.js';
-import type { TranscriptSegmentRecord } from '../../../sermons/domain/sermon-intelligence.js';
-import type {
-  AIAttribution,
-  ContentType,
-  RewriteAction,
-  SourceMetadata,
-} from '../../domain/content-types.js';
-import type { SermonContext } from '../ports/out/sermon-context.port.js';
-import { CONTENT_SPECS, REWRITE_INSTRUCTIONS } from './content-specs.js';
+} from '../../sermons/application/services/prompt-context.js';
+import type { TranscriptSegmentRecord } from '../../sermons/domain/sermon-intelligence.js';
+import {
+  type AIAttribution,
+  CONTENT_SPECS,
+  type ContentType,
+  REWRITE_INSTRUCTIONS,
+  type RewriteAction,
+  type SourceMetadata,
+} from '../helper.js';
+import type { SermonContext } from './sermon-context.adapter.js';
 
 const MAX_CONTEXT_CHARS = 60_000;
 

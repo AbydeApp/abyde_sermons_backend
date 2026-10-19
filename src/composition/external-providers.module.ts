@@ -60,9 +60,9 @@ import {
   BRAND_RENDERER,
   MEDIA_OBSERVER,
   MEDIA_SETTINGS,
-} from '../modules/brand/application/ports/out/brand.ports.js';
-import { MediaMetrics } from '../modules/brand/infrastructure/media-metrics.js';
-import { MediaRenderer } from '../modules/brand/infrastructure/rendering/media-renderer.js';
+} from '../modules/brand/adapters/ports.js';
+import { MediaMetrics } from '../modules/brand/adapters/media-metrics.js';
+import { MediaRenderer } from '../modules/brand/adapters/media-renderer.js';
 import { SOCIAL_PROVIDER_REGISTRY } from '../modules/social/application/ports/out/social-publishing.port.js';
 import {
   SOCIAL_OBSERVER,
@@ -80,16 +80,6 @@ import { YouTubeSocialAdapter } from '../modules/social/infrastructure/providers
 import { SocialMetrics } from '../modules/social/infrastructure/social-metrics.js';
 import { SocialProviderRegistry } from '../modules/social/infrastructure/social-provider.registry.js';
 import { AesGcmTokenCipher } from '../shared/infrastructure/crypto/aes-gcm-token-cipher.js';
-import {
-  REEL_OBSERVER,
-  REEL_RENDERER,
-  REEL_SETTINGS,
-  SPEAKER_TRACKER,
-} from '../modules/reels/application/ports/out/reel.ports.js';
-import { ReelMetrics } from '../modules/reels/infrastructure/reel-metrics.js';
-import { FfmpegReelRenderer } from '../modules/reels/infrastructure/rendering/ffmpeg-reel-renderer.js';
-import { CenterSpeakerTracker } from '../modules/reels/infrastructure/tracking/center-speaker-tracker.js';
-import { CommandSpeakerTracker } from '../modules/reels/infrastructure/tracking/command-speaker-tracker.js';
 import type { StoragePort } from '../shared/application/ports/storage.port.js';
 import type { ScratchSpacePort } from '../modules/sermons/application/ports/out/processing.ports.js';
 import { createHash } from 'node:crypto';
@@ -259,39 +249,6 @@ const DEV_SOCIAL_KEY_SEED = 'abyde-sermon-social-development-only-key';
       useFactory: (config: AppConfig) =>
         new MediaRenderer(config.MEDIA_FFMPEG_PATH, config.MEDIA_FFPROBE_PATH),
     },
-    { provide: REEL_OBSERVER, useClass: ReelMetrics },
-    {
-      provide: REEL_SETTINGS,
-      inject: [APP_CONFIG],
-      useFactory: (config: AppConfig) => ({
-        minSeconds: config.MEDIA_REEL_MIN_SECONDS,
-        maxSeconds: config.MEDIA_REEL_MAX_SECONDS,
-        hookSeconds: config.MEDIA_REEL_HOOK_SECONDS,
-        outroSeconds: config.MEDIA_REEL_OUTRO_SECONDS,
-      }),
-    },
-    {
-      provide: REEL_RENDERER,
-      inject: [APP_CONFIG],
-      useFactory: (config: AppConfig) =>
-        new FfmpegReelRenderer(
-          config.MEDIA_FFMPEG_PATH,
-          config.MEDIA_FFPROBE_PATH,
-        ),
-    },
-    {
-      provide: SPEAKER_TRACKER,
-      inject: [APP_CONFIG],
-      useFactory: (config: AppConfig) =>
-        config.MEDIA_SPEAKER_TRACKER === 'command' &&
-        config.MEDIA_SPEAKER_TRACKER_COMMAND
-          ? new CommandSpeakerTracker({
-              command: config.MEDIA_SPEAKER_TRACKER_COMMAND,
-              timeoutMs: config.MEDIA_SPEAKER_TRACKER_TIMEOUT_MS,
-              sampleFps: config.MEDIA_SPEAKER_TRACKER_FPS,
-            })
-          : new CenterSpeakerTracker(),
-    },
     { provide: SOCIAL_OBSERVER, useClass: SocialMetrics },
     {
       provide: SOCIAL_TOKEN_CIPHER,
@@ -385,10 +342,6 @@ const DEV_SOCIAL_KEY_SEED = 'abyde-sermon-social-development-only-key';
     },
   ],
   exports: [
-    REEL_OBSERVER,
-    REEL_SETTINGS,
-    REEL_RENDERER,
-    SPEAKER_TRACKER,
     MEDIA_OBSERVER,
     MEDIA_SETTINGS,
     BRAND_RENDERER,

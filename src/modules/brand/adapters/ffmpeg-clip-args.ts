@@ -1,4 +1,4 @@
-import type { WatermarkPosition } from '../../domain/brand-profile.js';
+import type { WatermarkPosition } from '../helper.js';
 
 export interface ClipArgsInput {
   sourcePath: string;

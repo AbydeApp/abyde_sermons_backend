@@ -21,7 +21,7 @@ const BATCH = 200;
 
 /**
  * Maintenance: deletes original sermon uploads whose plan retention has passed. Everything derived
- * from them (transcript, intelligence, content, rendered media, Reels, publishing records) stays.
+ * from them (transcript, intelligence, content, rendered media, publishing records) stays.
  *
  * Processes current state ("every expired original still stored"), so missed runs need no replay.
  * Safe to repeat: deleting a missing object succeeds, and the row is marked only once.

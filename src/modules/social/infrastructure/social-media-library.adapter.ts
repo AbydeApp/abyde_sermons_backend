@@ -6,7 +6,7 @@ import {
 import {
   MEDIA_ASSET_REPOSITORY,
   type MediaAssetRepositoryPort,
-} from '../../brand/application/ports/out/brand.ports.js';
+} from '../../brand/brand.repository.js';
 import type {
   PublishableAsset,
   SocialMediaLibraryPort,

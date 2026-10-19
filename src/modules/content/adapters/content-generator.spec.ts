@@ -1,9 +1,9 @@
 import type {
   LanguageModelPort,
   StructuredGenerationRequest,
-} from '../../../../shared/application/ports/language-model.port.js';
-import type { SermonContext } from '../ports/out/sermon-context.port.js';
-import { ContentGenerationService } from './content-generation.service.js';
+} from '../../../shared/application/ports/language-model.port.js';
+import { ContentGenerationService } from './content-generator.js';
+import type { SermonContext } from './sermon-context.adapter.js';
 
 const sermon: SermonContext = {
   churchId: 'c1',

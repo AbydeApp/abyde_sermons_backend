@@ -18,6 +18,7 @@ CREATE TABLE "brand_profiles" (
     "body_font" TEXT NOT NULL,
     "social_handle" TEXT,
     "website" TEXT,
+    "footer_text" TEXT,
     "watermark_enabled" BOOLEAN NOT NULL DEFAULT false,
     "watermark_position" TEXT,
     "voice" JSONB NOT NULL DEFAULT '{}',

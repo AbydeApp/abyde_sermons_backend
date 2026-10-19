@@ -1,4 +1,4 @@
-import type { ContentType } from '../../content/domain/content-types.js';
+import type { ContentType } from '../../content/helper.js';
 import type { IntegrationProvider } from '../../integrations/domain/integration.js';
 
 /**

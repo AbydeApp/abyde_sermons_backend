@@ -1,4 +1,4 @@
-/** Identity resolved from the session cookie. `churchId` is derived server-side, never from client input. */
+/** Identity resolved from the access token. `churchId` is derived server-side, never from client input. */
 export interface AuthContext {
   userId: string;
   sessionId: string;
@@ -14,7 +14,6 @@ export interface ChurchView {
   denomination: string | null;
   website: string | null;
   description: string | null;
-  logoUrl: string | null;
   preferredBibleTranslation: string;
   primaryColor: string | null;
   secondaryColor: string | null;
@@ -27,8 +26,9 @@ export interface ChurchView {
 
 export const CHURCH_DIRECTORY = Symbol('CHURCH_DIRECTORY');
 
-/** Read access to a user's church, implemented by the church module. */
+/** A user's church, implemented by the auth module. */
 export interface ChurchDirectoryPort {
   findViewByUserId(userId: string): Promise<ChurchView | null>;
   findIdByUserId(userId: string): Promise<string | null>;
+  findViewById(churchId: string): Promise<ChurchView | null>;
 }

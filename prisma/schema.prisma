@@ -159,18 +159,19 @@ enum SubscriptionStatus {
 // ───────────────────────── Identity ─────────────────────────
 
 model User {
-  id                  String    @id @db.Uuid
-  fullName            String    @map("full_name")
-  email               String    @unique // stored normalized (trimmed, lower-cased)
-  passwordHash        String    @map("password_hash")
-  emailVerifiedAt     DateTime? @map("email_verified_at")
-  onboardingCompleted Boolean   @default(false) @map("onboarding_completed")
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
+  id              String    @id @db.Uuid
+  fullName        String    @map("full_name")
+  email           String    @unique // stored normalized (trimmed, lower-cased)
+  passwordHash    String    @map("password_hash")
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  phoneNumber     String?   @map("phone_number")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  church         Church?
-  sessions       Session[]
-  passwordResets PasswordResetToken[]
+  church            Church?
+  sessions          Session[]
+  passwordResets    PasswordResetToken[]
+  emailVerification EmailVerification?
 
   @@map("users")
 }
@@ -207,6 +208,20 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+/// One live signup/login verification code per user; replaced whenever a new one is sent.
+model EmailVerification {
+  userId    String   @id @map("user_id") @db.Uuid
+  codeHash  String   @map("code_hash")
+  expiresAt DateTime @map("expires_at")
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt]) // expiry purge
+  @@map("email_verifications")
+}
+
 // ───────────────────────── Church ─────────────────────────
 
 model Church {
@@ -215,7 +230,6 @@ model Church {
   name                      String
   slug                      String   @unique
   ownerRole                 String   @map("owner_role")
-  logoObjectKey             String?  @map("logo_object_key")
   denomination              String?
   website                   String?
   description               String?
@@ -693,11 +707,11 @@ model BrandProfile {
   bodyFont             String   @map("body_font")
   socialHandle         String?  @map("social_handle")
   website              String?
+  footerText           String?  @map("footer_text")
   watermarkEnabled     Boolean  @default(false) @map("watermark_enabled")
   watermarkPosition    String?  @map("watermark_position")
   voice                Json     @default("{}") // validated BrandVoice document (see brand/domain)
   templateDefaults     Json     @default("{}") @map("template_defaults") // content type → template id
-  videoSettings        Json     @default("{}") @map("video_settings") // validated VideoSettings document (see brand/domain)
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 

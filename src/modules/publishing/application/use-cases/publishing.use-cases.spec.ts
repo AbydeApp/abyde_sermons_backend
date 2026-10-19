@@ -1,5 +1,5 @@
-import { ContentItem } from '../../../content/domain/content-item.entity.js';
-import { CalendarItem } from '../../../content/domain/calendar-item.entity.js';
+import { ContentItem } from '../../../content/helper.js';
+import { CalendarItem } from '../../../content/helper.js';
 import type {
   PublishingProviderPort,
   PublishingRepositoryPort,

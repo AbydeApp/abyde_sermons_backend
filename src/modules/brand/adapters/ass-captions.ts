@@ -1,5 +1,4 @@
-import type { BrandSnapshot } from '../../domain/brand-profile.js';
-import type { CaptionCue } from '../../domain/captions.js';
+import type { BrandSnapshot, CaptionCue } from '../helper.js';
 
 /** H:MM:SS.cc as ASS expects. */
 export function assTime(ms: number): string {

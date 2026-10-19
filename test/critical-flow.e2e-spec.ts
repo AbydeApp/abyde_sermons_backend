@@ -1,7 +1,7 @@
 import { Client, createTestApp, type TestApp } from './support/test-app.js';
 
 /**
- * Critical backend E2E (spec §47): Register → Create Church → Request Upload URL → Create Sermon →
+ * Critical backend E2E (spec §47): Register (creates the church) → Verify email → Request Upload URL → Create Sermon →
  * Queue Processing → Transcription (mocked) → Analysis (mocked) → Embeddings → READY → Generate Week →
  * Persist Content → Edit → Approve → Schedule.
  */
@@ -15,32 +15,42 @@ describe('critical sermon-to-calendar flow (e2e)', () => {
   });
   afterAll(() => t.close());
 
+  it('omits reels endpoints and background jobs from v1', async () => {
+    const church = new Client(t);
+    await church.onboard('V1 Church');
+    const sermonId = await church.readySermon();
+    await church.get('/reels').expect(404);
+    await church.post('/reels', { sermonId }).expect(404);
+    await church.get(`/sermons/${sermonId}/reel-candidates`).expect(404);
+    await church.post(`/sermons/${sermonId}/reel-candidates`).expect(404);
+    expect(t.infra.registry.queues()).not.toContain('reel-candidates');
+    expect(t.infra.registry.queues()).not.toContain('reel-render');
+    expect(
+      t.infra.queue.jobs.some((job) => job.queue.startsWith('reel-')),
+    ).toBe(false);
+  });
+
   it('runs the MVP loop end to end', async () => {
+    client.email = 'ade@example.com';
     const register = await client
       .post('/auth/register', {
         fullName: 'Pastor Ade',
         email: 'Ade@Example.com',
         password: 'Faith2026!',
+        churchName: 'Grace Community Church',
       })
       .expect(201);
-    expect(register.body).toMatchObject({
-      authenticated: true,
-      onboardingCompleted: false,
-      church: null,
-      user: { email: 'ade@example.com' },
-    });
-    expect(register.headers['set-cookie']?.[0]).toMatch(
-      /HttpOnly; SameSite=Lax/,
-    );
+    // No session until the emailed code is confirmed.
+    expect(register.body).toEqual({ email: 'ade@example.com' });
+    await client.get('/sermons').expect(401);
 
-    const onboarded = await client
-      .post('/church', {
-        name: 'Grace Community Church',
-        ownerRole: 'Lead Pastor',
-      })
-      .expect(201);
+    const onboarded = await client.verifyEmail();
     expect(onboarded.body).toMatchObject({
-      onboardingCompleted: true,
+      authenticated: true,
+      accessToken: expect.any(String),
+      refreshToken: expect.any(String),
+      expiresIn: expect.any(Number),
+      user: { email: 'ade@example.com' },
       church: {
         name: 'Grace Community Church',
         slug: 'grace-community-church',

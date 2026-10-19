@@ -24,7 +24,6 @@ ADD COLUMN     "expires_at" TIMESTAMP(3);
 ALTER TABLE "transcript_segments" ADD COLUMN     "words" JSONB;
 
 -- AlterTable
-ALTER TABLE "brand_profiles" ADD COLUMN     "video_settings" JSONB NOT NULL DEFAULT '{}';
 
 -- CreateTable
 CREATE TABLE "reel_candidates" (

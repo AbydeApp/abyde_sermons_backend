@@ -31,8 +31,8 @@ import { JOB_OBSERVER } from '../shared/infrastructure/queue/job-observer.js';
 import { RedisConnection } from '../shared/infrastructure/redis/redis.provider.js';
 import {
   READINESS_CHECKS,
-  type ReadinessCheckPort,
-} from '../modules/health/application/ports/out/readiness-check.port.js';
+  type ReadinessCheck,
+} from '../modules/health/helper.js';
 import {
   BullMqQueueInspector,
   QUEUE_INSPECTOR,
@@ -84,7 +84,7 @@ const DEV_KEY_SEED = 'abyde-sermon-development-only-key';
       useFactory: (
         prisma: PrismaService,
         redis: RedisConnection,
-      ): ReadinessCheckPort[] => [
+      ): ReadinessCheck[] => [
         {
           name: 'database',
           check: async () => void (await prisma.client.$queryRaw`SELECT 1`),

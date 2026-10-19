@@ -1,5 +1,4 @@
-import type { BrandSnapshot, WatermarkPosition } from './brand-profile.js';
-import type { TemplateDefinition } from './templates.js';
+import type { BrandSnapshot, TemplateDefinition, WatermarkPosition } from '../helper.js';
 
 /** Everything needed to draw one card. Pure data: the same spec always yields the same image. */
 export interface CardSpec {

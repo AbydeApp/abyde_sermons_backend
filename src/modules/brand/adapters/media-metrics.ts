@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Histogram } from 'prom-client';
 import { MetricsService } from '../../../shared/infrastructure/observability/metrics.service.js';
-import type { MediaObserverPort } from '../application/ports/out/brand.ports.js';
+import type { MediaObserverPort } from './ports.js';
 
 /** Render duration per kind (images, carousels, clips) and outcome. */
 @Injectable()
