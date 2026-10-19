@@ -269,6 +269,7 @@ export class AuthService implements OnModuleInit, ChurchDirectoryPort, ChurchPro
       const existing = await this.repo.findChurchByUserId(userId);
       if (existing) return existing;
       const input = {
+        createdAt: this.clock.now(),
         id: newId(),
         userId,
         name: name?.trim() || DEFAULT_CHURCH_NAME,

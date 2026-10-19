@@ -66,9 +66,6 @@ export const envSchema = z
     REDIS_URL: z.string().url(),
 
     // AUTH_*
-    AUTH_COOKIE_NAME: z.string().default('abyde_session'),
-    AUTH_COOKIE_DOMAIN: optionalString,
-    AUTH_COOKIE_SECURE: booleanString.optional(),
     // HMAC secret that signs access tokens; production/staging must set their own.
     AUTH_ACCESS_TOKEN_SECRET: z.string().min(32).default(DEV_ACCESS_TOKEN_SECRET),
     AUTH_ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(15),
@@ -122,9 +119,7 @@ export const envSchema = z
     // BILLING_*
     BILLING_PROVIDER: z.enum(['paystack', 'fake']).default('fake'),
     BILLING_PAYSTACK_SECRET_KEY: optionalString,
-    BILLING_PAYSTACK_PLAN_STARTER: optionalString,
-    BILLING_PAYSTACK_PLAN_GROWTH: optionalString,
-    BILLING_PAYSTACK_PLAN_MINISTRY: optionalString,
+    BILLING_PAYSTACK_PLAN_STANDARD: optionalString,
 
     // EMAIL_*
     EMAIL_PROVIDER: z.enum(['resend', 'outbox']).default('outbox'),
@@ -137,8 +132,6 @@ export const envSchema = z
     PUBLISHING_META_APP_ID: optionalString,
     PUBLISHING_META_APP_SECRET: optionalString,
     PUBLISHING_META_GRAPH_VERSION: z.string().default('v21.0'),
-    PUBLISHING_GOOGLE_CLIENT_ID: optionalString,
-    PUBLISHING_GOOGLE_CLIENT_SECRET: optionalString,
     PUBLISHING_MAILCHIMP_CLIENT_ID: optionalString,
     PUBLISHING_MAILCHIMP_CLIENT_SECRET: optionalString,
 
@@ -254,8 +247,8 @@ export const envSchema = z
       }
     }
     if (env.APP_ENV === 'production' || env.APP_ENV === 'staging') {
-      // Internet-reachable environments: no localhost/plain-http URLs, no insecure cookies,
-      // no publicly known fake-billing secret, and a real metrics token.
+      // Internet-reachable environments: no localhost/plain-http URLs, no development
+      // access-token secret, no publicly known fake-billing secret, and a real metrics token.
       const publicUrls: Array<[string, string]> = [
         ['APP_WEB_URL', env.APP_WEB_URL],
         ['APP_PUBLIC_API_URL', env.APP_PUBLIC_API_URL],
@@ -274,8 +267,6 @@ export const envSchema = z
         undefined, 'DATABASE_EXPECTED_PROCESSES', `is required in ${env.APP_ENV} (peak process count, for the connection budget check)`);
       require(env.AUTH_ACCESS_TOKEN_SECRET ===
         DEV_ACCESS_TOKEN_SECRET, 'AUTH_ACCESS_TOKEN_SECRET', `must be set explicitly in ${env.APP_ENV}`);
-      require(env.AUTH_COOKIE_SECURE ===
-        false, 'AUTH_COOKIE_SECURE', `must not be false in ${env.APP_ENV}`);
       require(env.BILLING_PROVIDER ===
         'fake', 'BILLING_PROVIDER', `fake is not allowed in ${env.APP_ENV} (use Paystack test keys)`);
       require(env.OBSERVABILITY_METRICS_TOKEN !== undefined &&
@@ -283,10 +274,8 @@ export const envSchema = z
           24, 'OBSERVABILITY_METRICS_TOKEN', 'must be at least 24 characters');
       require(env.BILLING_PROVIDER === 'paystack' &&
         !(
-          env.BILLING_PAYSTACK_PLAN_STARTER &&
-          env.BILLING_PAYSTACK_PLAN_GROWTH &&
-          env.BILLING_PAYSTACK_PLAN_MINISTRY
-        ), 'BILLING_PAYSTACK_PLAN_GROWTH', 'all three BILLING_PAYSTACK_PLAN_* codes are required with Paystack');
+          env.BILLING_PAYSTACK_PLAN_STANDARD
+        ), 'BILLING_PAYSTACK_PLAN_STANDARD', 'BILLING_PAYSTACK_PLAN_STANDARD is required with Paystack');
       // Deployed environments hold real integration tokens: never fall back to the development key.
       require(!env.PUBLISHING_ENCRYPTION_KEY, 'PUBLISHING_ENCRYPTION_KEY', 'required in staging and production');
       // Social tokens get their own key; it is mandatory as soon as any provider can connect.
@@ -310,7 +299,6 @@ export function socialProvidersConfigured(
 
 export type AppConfig = Env & {
   swaggerEnabled: boolean;
-  cookieSecure: boolean;
 };
 
 /** Adds the settings derived from validated environment values. */
@@ -319,9 +307,6 @@ export function withDerivedSettings(env: Env): AppConfig {
     ...env,
     // Swagger is on outside production unless explicitly overridden (never on in production).
     swaggerEnabled: env.APP_SWAGGER_ENABLED ?? env.APP_ENV !== 'production',
-    // Secure cookies everywhere except plain-http local development.
-    cookieSecure:
-      env.AUTH_COOKIE_SECURE ?? !['development', 'test'].includes(env.APP_ENV),
   };
 }
 

@@ -18,9 +18,7 @@ const production = {
   EMAIL_PROVIDER: 'resend',
   EMAIL_RESEND_API_KEY: 're_test',
   PUBLISHING_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
-  BILLING_PAYSTACK_PLAN_STARTER: 'PLN_s',
-  BILLING_PAYSTACK_PLAN_GROWTH: 'PLN_g',
-  BILLING_PAYSTACK_PLAN_MINISTRY: 'PLN_m',
+  BILLING_PAYSTACK_PLAN_STANDARD: 'PLN_g',
   DATABASE_EXPECTED_PROCESSES: '11',
   AUTH_ACCESS_TOKEN_SECRET: 'x'.repeat(48),
   APP_WEB_URL: 'https://app.abyde.app',
@@ -36,7 +34,6 @@ describe('parseEnv', () => {
     });
     expect(config.APP_PORT).toBe(4000);
     expect(config.APP_CORS_ORIGINS).toEqual(['https://a.com', 'https://b.com']);
-    expect(config.cookieSecure).toBe(false);
   });
 
   it('enables swagger outside production and disables it in production by default', () => {
@@ -47,7 +44,6 @@ describe('parseEnv', () => {
     expect(() =>
       parseEnv({ ...production, APP_SWAGGER_ENABLED: 'true' }),
     ).toThrow(/APP_SWAGGER_ENABLED/);
-    expect(parseEnv(production).cookieSecure).toBe(true);
   });
 
   it('fails fast on missing or malformed variables', () => {
@@ -84,9 +80,6 @@ describe('parseEnv', () => {
           APP_CORS_ORIGINS: 'https://app.abyde.app,http://localhost:3001',
         }),
       ).toThrow(/APP_CORS_ORIGINS/);
-      expect(() => parseEnv({ ...env, AUTH_COOKIE_SECURE: 'false' })).toThrow(
-        /AUTH_COOKIE_SECURE/,
-      );
       expect(() => parseEnv({ ...env, BILLING_PROVIDER: 'fake' })).toThrow(
         /BILLING_PROVIDER/,
       );
@@ -100,7 +93,7 @@ describe('parseEnv', () => {
         parseEnv({ ...env, DATABASE_EXPECTED_PROCESSES: undefined }),
       ).toThrow(/DATABASE_EXPECTED_PROCESSES/);
       expect(() =>
-        parseEnv({ ...env, BILLING_PAYSTACK_PLAN_GROWTH: undefined }),
+        parseEnv({ ...env, BILLING_PAYSTACK_PLAN_STANDARD: undefined }),
       ).toThrow(/BILLING_PAYSTACK_PLAN/);
     }
   });

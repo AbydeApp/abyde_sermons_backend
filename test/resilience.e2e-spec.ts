@@ -1,5 +1,5 @@
 import { GenerationService } from '../src/modules/content/generation.service.js';
-import { RecoverStuckSermonsUseCase } from '../src/modules/sermons/application/use-cases/recover-stuck-sermons.use-case.js';
+import { SermonsService } from '../src/modules/sermons/sermons.service.js';
 import { PurgeOldRecordsUseCase } from '../src/modules/system/purge-old-records.use-case.js';
 import { AuthService } from '../src/modules/auth/auth.service.js';
 import { Client, createTestApp, type TestApp } from './support/test-app.js';
@@ -64,11 +64,11 @@ describe('resilience (e2e)', () => {
   it('marks a sermon whose job was lost as failed and retryable, then recovers on retry', async () => {
     const id = await client.createSermon();
     t.infra.queue.jobs.length = 0; // the queue lost the job (worker killed / Redis flushed)
-    const recover = t.app.get(RecoverStuckSermonsUseCase);
-    expect(await recover.execute()).toBe(0); // not stuck yet
+    const recover = t.app.get(SermonsService);
+    expect(await recover.recoverStuck()).toBe(0); // not stuck yet
     t.infra.clock.advance(2 * 3600 * 1000 + 1000);
-    expect(await recover.execute()).toBe(1);
-    expect(await recover.execute()).toBe(0); // idempotent
+    expect(await recover.recoverStuck()).toBe(1);
+    expect(await recover.recoverStuck()).toBe(0); // idempotent
     await client.login();
     const failed = await client.get(`/sermons/${id}/status`).expect(200);
     expect(failed.body).toMatchObject({

@@ -20,41 +20,36 @@ import { S3StorageAdapter } from '../shared/infrastructure/storage/s3-storage.ad
 import {
   BILLING_SETTINGS,
   PAYMENT_PROVIDER,
-} from '../modules/billing/application/ports/out/billing.ports.js';
-import { FakePaymentAdapter } from '../modules/billing/infrastructure/providers/fake-payment.adapter.js';
-import { PaystackAdapter } from '../modules/billing/infrastructure/providers/paystack.adapter.js';
+} from '../modules/billing/adapters/ports.js';
+import { FakePaymentAdapter } from '../modules/billing/adapters/fake-payment.adapter.js';
+import { PaystackAdapter } from '../modules/billing/adapters/paystack.adapter.js';
 import {
   INTEGRATION_SETTINGS,
   OAUTH_PROVIDERS,
-} from '../modules/integrations/application/ports/out/integration.ports.js';
+  PUBLISHING_PROVIDERS,
+} from '../modules/integrations/adapters/ports.js';
 import {
   MailchimpOAuthProvider,
-  MetaOAuthProvider,
   WhatsAppOAuthProvider,
-  YouTubeOAuthProvider,
-} from '../modules/integrations/infrastructure/oauth/oauth-providers.js';
+} from '../modules/integrations/adapters/oauth-providers.js';
+import { MailchimpPublisher } from '../modules/integrations/adapters/mailchimp-publisher.js';
 import {
   GROUNDED_ANSWER,
   SEGMENT_SEARCH,
 } from '../modules/library/adapters/ports.js';
 import { AIGroundedAnswerAdapter } from '../modules/library/adapters/ai-grounded-answer.adapter.js';
 import { EmbeddingSegmentSearchAdapter } from '../modules/library/adapters/embedding-segment-search.adapter.js';
-import { PUBLISHING_PROVIDERS } from '../modules/publishing/application/ports/out/publishing.ports.js';
-import {
-  MailchimpPublisher,
-  MetaPagePublisher,
-} from '../modules/publishing/infrastructure/providers/publishing-providers.js';
 import {
   DOCUMENT_TEXT_EXTRACTOR,
   MEDIA_PROCESSOR,
   SCRATCH_SPACE,
   TRANSCRIPTION,
-} from '../modules/sermons/application/ports/out/processing.ports.js';
-import { DocumentTextExtractor } from '../modules/sermons/infrastructure/documents/document-text-extractor.js';
-import { FfmpegMediaProcessor } from '../modules/sermons/infrastructure/media/ffmpeg-media-processor.js';
-import { OsScratchSpace } from '../modules/sermons/infrastructure/media/os-scratch-space.js';
-import { FakeTranscriptionAdapter } from '../modules/sermons/infrastructure/transcription/fake-transcription.adapter.js';
-import { OpenAITranscriptionAdapter } from '../modules/sermons/infrastructure/transcription/openai-transcription.adapter.js';
+} from '../modules/sermons/adapters/ports.js';
+import { DocumentTextExtractor } from '../modules/sermons/adapters/document-text-extractor.js';
+import { FfmpegMediaProcessor } from '../modules/sermons/adapters/ffmpeg-media-processor.js';
+import { OsScratchSpace } from '../modules/sermons/adapters/os-scratch-space.js';
+import { FakeTranscriptionAdapter } from '../modules/sermons/adapters/fake-transcription.adapter.js';
+import { OpenAITranscriptionAdapter } from '../modules/sermons/adapters/openai-transcription.adapter.js';
 
 import {
   BRAND_RENDERER,
@@ -81,7 +76,7 @@ import { SocialMetrics } from '../modules/social/infrastructure/social-metrics.j
 import { SocialProviderRegistry } from '../modules/social/infrastructure/social-provider.registry.js';
 import { AesGcmTokenCipher } from '../shared/infrastructure/crypto/aes-gcm-token-cipher.js';
 import type { StoragePort } from '../shared/application/ports/storage.port.js';
-import type { ScratchSpacePort } from '../modules/sermons/application/ports/out/processing.ports.js';
+import type { ScratchSpacePort } from '../modules/sermons/adapters/ports.js';
 import { createHash } from 'node:crypto';
 
 const DEV_SOCIAL_KEY_SEED = 'abyde-sermon-social-development-only-key';
@@ -185,9 +180,7 @@ const DEV_SOCIAL_KEY_SEED = 'abyde-sermon-social-development-only-key';
       useFactory: (config: AppConfig) =>
         config.BILLING_PROVIDER === 'paystack'
           ? new PaystackAdapter(config.BILLING_PAYSTACK_SECRET_KEY ?? '', {
-              starter: config.BILLING_PAYSTACK_PLAN_STARTER,
-              growth: config.BILLING_PAYSTACK_PLAN_GROWTH,
-              ministry: config.BILLING_PAYSTACK_PLAN_MINISTRY,
+              standard: config.BILLING_PAYSTACK_PLAN_STANDARD,
             })
           : new FakePaymentAdapter(config.APP_WEB_URL),
     },
@@ -214,26 +207,17 @@ const DEV_SOCIAL_KEY_SEED = 'abyde-sermon-social-development-only-key';
           graphVersion: config.PUBLISHING_META_GRAPH_VERSION,
         };
         return [
-          new MetaOAuthProvider(meta),
           new WhatsAppOAuthProvider(meta),
           new MailchimpOAuthProvider({
             clientId: config.PUBLISHING_MAILCHIMP_CLIENT_ID,
             clientSecret: config.PUBLISHING_MAILCHIMP_CLIENT_SECRET,
-          }),
-          new YouTubeOAuthProvider({
-            clientId: config.PUBLISHING_GOOGLE_CLIENT_ID,
-            clientSecret: config.PUBLISHING_GOOGLE_CLIENT_SECRET,
           }),
         ];
       },
     },
     {
       provide: PUBLISHING_PROVIDERS,
-      inject: [APP_CONFIG],
-      useFactory: (config: AppConfig) => [
-        new MetaPagePublisher(config.PUBLISHING_META_GRAPH_VERSION),
-        new MailchimpPublisher(),
-      ],
+      useFactory: () => [new MailchimpPublisher()],
     },
     { provide: MEDIA_OBSERVER, useClass: MediaMetrics },
     {

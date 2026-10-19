@@ -76,7 +76,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
       return next.handle();
     }
     // Bodies containing passwords are never stored, not even as a hash; a replay could not
-    // re-issue the session cookie anyway.
+    // re-issue the tokens anyway.
     if (!required && isPasswordRoute(request.path)) return next.handle();
     if (!KEY_PATTERN.test(header)) {
       throw new DomainError(

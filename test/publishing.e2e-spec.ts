@@ -1,4 +1,4 @@
-import { DispatchDuePublicationsUseCase } from '../src/modules/publishing/application/use-cases/publishing.use-cases.js';
+import { PublishingService } from '../src/modules/integrations/publishing.service.js';
 import { Client, createTestApp, type TestApp } from './support/test-app.js';
 
 describe('publishing and integrations (e2e)', () => {
@@ -20,7 +20,7 @@ describe('publishing and integrations (e2e)', () => {
       .expect(201);
     return item.id as string;
   };
-  const dispatch = () => t.app.get(DispatchDuePublicationsUseCase).execute();
+  const dispatch = () => t.app.get(PublishingService).dispatchDue();
 
   beforeAll(async () => {
     t = await createTestApp();
@@ -29,7 +29,7 @@ describe('publishing and integrations (e2e)', () => {
     sermonId = await client.readySermon();
     await client
       .post(`/sermons/${sermonId}/generate-week`, {
-        contentTypes: ['SOCIAL_POST', 'EMAIL', 'WHATSAPP'],
+        contentTypes: ['EMAIL', 'BIBLE_STUDY', 'WHATSAPP'],
       })
       .expect(202);
     await t.infra.queue.drain();
@@ -39,21 +39,17 @@ describe('publishing and integrations (e2e)', () => {
   it('lists one row per provider and never exposes secrets', async () => {
     const list = await client.get('/integrations').expect(200);
     expect(list.body).toEqual([
-      { provider: 'META', status: 'NOT_CONNECTED', accountLabel: null },
       { provider: 'WHATSAPP', status: 'NOT_CONNECTED', accountLabel: null },
       { provider: 'EMAIL', status: 'NOT_CONNECTED', accountLabel: null },
-      { provider: 'YOUTUBE', status: 'NOT_CONNECTED', accountLabel: null },
     ]);
-    const unavailable = await client
-      .post('/integrations/youtube/connect')
-      .expect(503);
-    expect(unavailable.body.code).toBe('INTEGRATION_UNAVAILABLE');
+    // Social platforms are connected under /social, not here.
+    await client.post('/integrations/youtube/connect').expect(404);
     await client.post('/integrations/myspace/connect').expect(404);
   });
 
   it('fails visibly (without posting) when the channel is not connected', async () => {
     const itemId = await approveAndSchedule(
-      'SOCIAL_POST',
+      'EMAIL',
       0,
       '2026-10-05T10:00:00Z',
     );
@@ -61,7 +57,7 @@ describe('publishing and integrations (e2e)', () => {
     expect(await dispatch()).toBe(1);
     await t.infra.queue.drain();
     expect((await client.get(`/content/${itemId}`)).body.status).toBe('FAILED');
-    expect(t.infra.metaPublisher.published).toHaveLength(0);
+    expect(t.infra.emailPublisher.published).toHaveLength(0);
 
     // Re-approving after a failed publish clears the stale calendar entry, so it can be scheduled again.
     const reapproved = await client
@@ -82,36 +78,43 @@ describe('publishing and integrations (e2e)', () => {
 
   it('connects via OAuth with single-use state and stores encrypted credentials', async () => {
     t.infra.clock.set('2026-10-05T09:00:00Z');
-    const connect = await client.post('/integrations/meta/connect').expect(200);
+    const connect = await client.post('/integrations/email/connect').expect(200);
     const state =
       new URL(connect.body.authorizationUrl).searchParams.get('state') ?? '';
-    const callback = await client
-      .get(`/integrations/meta/callback?code=good-code&state=${state}`)
+    // The provider redirect carries no access token, so it is forwarded to the web app.
+    const callback = await new Client(t)
+      .get(`/integrations/email/callback?code=good-code&state=${state}`)
       .expect(302);
     expect(callback.headers.location).toBe(
-      'http://web.test/integrations?connected=META',
+      `http://web.test/integrations/callback?provider=EMAIL&code=good-code&state=${state}`,
     );
+    const done = await client
+      .post('/integrations/email/complete', { code: 'good-code', state })
+      .expect(200);
+    expect(done.body).toEqual({
+      provider: 'EMAIL',
+      status: 'CONNECTED',
+      accountLabel: 'EMAIL account',
+    });
     const replay = await client
-      .get(`/integrations/meta/callback?code=good-code&state=${state}`)
-      .expect(302);
-    expect(replay.headers.location).toBe(
-      'http://web.test/integrations?error=invalid_state',
-    );
+      .post('/integrations/email/complete', { code: 'good-code', state })
+      .expect(422);
+    expect(replay.body.code).toBe('INVALID_OAUTH_STATE');
     const stored = t.infra.db.integrations.values().next().value;
     expect(stored?.encryptedCredentials).toMatch(/^v1\./);
     expect(stored?.encryptedCredentials).not.toContain('good-code');
     const list = await client.get('/integrations').expect(200);
-    expect(list.body[0]).toEqual({
-      provider: 'META',
+    expect(list.body[1]).toEqual({
+      provider: 'EMAIL',
       status: 'CONNECTED',
-      accountLabel: 'META account',
+      accountLabel: 'EMAIL account',
     });
   });
 
   it('publishes due items exactly once, even if dispatched or processed twice', async () => {
     const itemId = await approveAndSchedule(
-      'SOCIAL_POST',
-      1,
+      'BIBLE_STUDY',
+      0,
       '2026-10-05T12:00:00Z',
     );
     t.infra.clock.set('2026-10-05T11:59:00Z');
@@ -123,9 +126,9 @@ describe('publishing and integrations (e2e)', () => {
     const published = await client.get(`/content/${itemId}`).expect(200);
     expect(published.body.status).toBe('PUBLISHED');
     expect(published.body.publishedAt).toBe('2026-10-05T12:00:30.000Z');
-    expect(t.infra.metaPublisher.published).toHaveLength(1);
+    expect(t.infra.emailPublisher.published).toHaveLength(1);
     expect(
-      t.infra.metaPublisher.published[0]?.credentials.pageAccessToken,
+      t.infra.emailPublisher.published[0]?.credentials.accessToken,
     ).toBe('token-good-code');
 
     // Re-running the same publish job (e.g. a duplicate delivery) must not post again.
@@ -136,7 +139,7 @@ describe('publishing and integrations (e2e)', () => {
     );
     if (job) job.state = 'waiting';
     await t.infra.queue.drain();
-    expect(t.infra.metaPublisher.published).toHaveLength(1);
+    expect(t.infra.emailPublisher.published).toHaveLength(1);
     await client
       .patch(`/content/${itemId}`, { body: 'edit after publishing' })
       .expect(422);
@@ -156,9 +159,9 @@ describe('publishing and integrations (e2e)', () => {
   });
 
   it('disconnects idempotently', async () => {
-    await client.delete('/integrations/meta').expect(204);
-    await client.delete('/integrations/meta').expect(204);
-    expect((await client.get('/integrations')).body[0].status).toBe(
+    await client.delete('/integrations/email').expect(204);
+    await client.delete('/integrations/email').expect(204);
+    expect((await client.get('/integrations')).body[1].status).toBe(
       'NOT_CONNECTED',
     );
   });

@@ -9,6 +9,7 @@ import { churchExists, emailTaken } from './helper.js';
 export const AUTH_REPOSITORY = Symbol('AUTH_REPOSITORY');
 
 export interface ChurchRecord {
+  createdAt: Date;
   id: string;
   userId: string;
   name: string;
@@ -127,7 +128,7 @@ const toUser = (row: UserRow): UserRecord => ({
   createdAt: row.createdAt,
 });
 
-const toChurch = ({ createdAt: _c, updatedAt: _u, ...row }: ChurchRow): ChurchRecord => row;
+const toChurch = ({ updatedAt: _u, ...row }: ChurchRow): ChurchRecord => row;
 
 @Injectable()
 export class PrismaAuthRepository implements AuthRepository {

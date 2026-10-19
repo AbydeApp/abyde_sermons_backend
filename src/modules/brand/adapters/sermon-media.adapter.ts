@@ -1,12 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  SERMON_REPOSITORY,
-  type SermonRepositoryPort,
-} from '../../sermons/application/ports/out/sermon-repository.port.js';
-import {
-  TRANSCRIPT_REPOSITORY,
-  type TranscriptRepositoryPort,
-} from '../../sermons/application/ports/out/transcript-repository.port.js';
+import { SERMON_REPOSITORY, type SermonRepositoryPort } from '../../sermons/sermons.repository.js';
+import { TRANSCRIPT_REPOSITORY, type TranscriptRepositoryPort } from '../../sermons/sermons.repository.js';
 import type { TimedText } from '../helper.js';
 import type { SermonMediaPort, SermonVideoSource } from './ports.js';
 

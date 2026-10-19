@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CACHE, type CachePort } from '../../shared/application/ports/cache.port.js';
 import { CLOCK, type ClockPort } from '../../shared/application/ports/clock.port.js';
 import { lagosMonthRange } from '../../shared/domain/lagos-time.js';
-import { SERMON_QUERY, type SermonQueryPort } from '../sermons/application/ports/out/sermon-repository.port.js';
+import { SERMON_QUERY, type SermonQueryPort } from '../sermons/sermons.repository.js';
 import { ANALYTICS_QUERY, type AnalyticsQueryPort } from './analytics.repository.js';
 import {
   type AnalyticsView, type DashboardView, METRICS_TTL_SECONDS, metricsCacheKey, type ProductMetrics, toAnalyticsView,

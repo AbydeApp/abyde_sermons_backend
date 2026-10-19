@@ -4,7 +4,7 @@ import {
   LANGUAGE_MODEL,
   type LanguageModelPort,
 } from '../../../shared/application/ports/language-model.port.js';
-import { formatTimestamp } from '../../sermons/application/services/prompt-context.js';
+import { formatTimestamp } from '../../sermons/helper.js';
 import type {
   GroundedAnswer,
   GroundedAnswerPort,

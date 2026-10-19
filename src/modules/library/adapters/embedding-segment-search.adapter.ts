@@ -8,10 +8,7 @@ import {
   LANGUAGE_MODEL,
   type LanguageModelPort,
 } from '../../../shared/application/ports/language-model.port.js';
-import {
-  EMBEDDING_REPOSITORY,
-  type EmbeddingRepositoryPort,
-} from '../../sermons/application/ports/out/transcript-repository.port.js';
+import { EMBEDDING_REPOSITORY, type EmbeddingRepositoryPort } from '../../sermons/sermons.repository.js';
 import type {
   SegmentSearchPort,
   SegmentSearchResult,

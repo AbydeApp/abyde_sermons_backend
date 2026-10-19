@@ -43,7 +43,7 @@ describe('cross-church isolation (e2e)', () => {
         })
         .expect(201)
     ).body.id;
-    await b.post('/integrations/meta/connect').expect(200);
+    await b.post('/integrations/email/connect').expect(200);
   });
   afterAll(() => t.close());
 
@@ -156,60 +156,51 @@ describe('cross-church isolation (e2e)', () => {
   });
 
   it('Church A cannot access Church B integration', async () => {
-    const connect = await b.post('/integrations/meta/connect').expect(200);
+    const connect = await b.post('/integrations/email/connect').expect(200);
     const state = new URL(connect.body.authorizationUrl).searchParams.get(
       'state',
     );
-    // B's authorisation link completed in A's browser (or with no session) connects nothing:
-    // the callback must come from a session of the church that started the flow.
+    // B's authorisation link completed by A (or by nobody signed in) connects nothing: the
+    // completion must come from the church that started the flow.
     const hijack = await a
-      .get(`/integrations/meta/callback?code=abc&state=${state}`)
-      .expect(302);
-    expect(hijack.headers.location).toBe(
-      'http://web.test/integrations?error=invalid_session',
-    );
-    const anonymousState = new URL(
-      (await b.post('/integrations/meta/connect').expect(200)).body
-        .authorizationUrl,
-    ).searchParams.get('state');
-    const anonymous = await new Client(t)
-      .get(`/integrations/meta/callback?code=abc&state=${anonymousState}`)
-      .expect(302);
-    expect(anonymous.headers.location).toBe(
-      'http://web.test/integrations?error=invalid_session',
-    );
+      .post('/integrations/email/complete', { code: 'abc', state })
+      .expect(422);
+    expect(hijack.body.code).toBe('INVALID_OAUTH_STATE');
+    await new Client(t)
+      .post('/integrations/email/complete', { code: 'abc', state })
+      .expect(401);
     for (const client of [a, b]) {
       const rows = await client.get('/integrations').expect(200);
       expect(
-        rows.body.find((row: { provider: string }) => row.provider === 'META')
+        rows.body.find((row: { provider: string }) => row.provider === 'EMAIL')
           .status,
       ).toBe('NOT_CONNECTED');
     }
     // B completes its own flow.
     const ownState = new URL(
-      (await b.post('/integrations/meta/connect').expect(200)).body
+      (await b.post('/integrations/email/connect').expect(200)).body
         .authorizationUrl,
     ).searchParams.get('state');
     await b
-      .get(`/integrations/meta/callback?code=abc&state=${ownState}`)
-      .expect(302);
+      .post('/integrations/email/complete', { code: 'abc', state: ownState })
+      .expect(200);
     const aIntegrations = await a.get('/integrations').expect(200);
     expect(
       aIntegrations.body.find(
-        (row: { provider: string }) => row.provider === 'META',
+        (row: { provider: string }) => row.provider === 'EMAIL',
       ).status,
     ).toBe('NOT_CONNECTED');
     const bIntegrations = await b.get('/integrations').expect(200);
     expect(
       bIntegrations.body.find(
-        (row: { provider: string }) => row.provider === 'META',
+        (row: { provider: string }) => row.provider === 'EMAIL',
       ).status,
     ).toBe('CONNECTED');
-    await a.delete('/integrations/meta').expect(204);
+    await a.delete('/integrations/email').expect(204);
     const stillConnected = await b.get('/integrations').expect(200);
     expect(
       stillConnected.body.find(
-        (row: { provider: string }) => row.provider === 'META',
+        (row: { provider: string }) => row.provider === 'EMAIL',
       ).status,
     ).toBe('CONNECTED');
     expect(JSON.stringify(bIntegrations.body)).not.toMatch(/token|credential/i);

@@ -46,10 +46,10 @@ Cross-module dependencies run one way and go through ports: content reads sermon
 
 ## Sessions and HTTP security
 
-- Opaque random session token in an `HttpOnly; Secure; SameSite=Lax` cookie. Only the SHA-256 hash is stored. Sessions are revocable (logout, password change and reset revoke them), cached in Redis for 60s, and the cache entry is evicted on revocation.
+- Sign-in returns a short-lived signed access token (sent as `Authorization: Bearer`) and an opaque refresh token that is rotated on every use. Only the SHA-256 hash of the refresh token is stored. Sessions are revocable (logout, password change and reset revoke them); a revoked session's access tokens stop working at once through a short-lived tombstone in Redis.
 - Passwords use scrypt (N=2^15). Login takes the same time whether or not the email exists (a dummy hash is checked), errors are generic, failures lock out per email, and credential routes have a per-IP throttle.
 - CSRF: state-changing requests must carry an allow-listed `Origin` (or no cross-site `Sec-Fetch-Site`).
-- Helmet (strict CSP when Swagger is off), CORS allowlist with credentials, 2 MB JSON limit, `trust proxy` hops configurable.
+- Helmet (strict CSP when Swagger is off), CORS allowlist (bearer auth, no credentials), 2 MB JSON limit, `trust proxy` hops configurable.
 - Global rate limiting uses Redis-backed counters (shared across API replicas). AI and credential routes have tighter budgets.
 - One error envelope (`statusCode, code, message, errors, requestId`). Stack traces, SQL and provider errors never reach clients. 5xx errors go to Sentry with bodies and cookies stripped.
 - Integration credentials are AES-256-GCM sealed at rest and never returned. OAuth `state` is random, single-use and expires in 10 minutes, and the callback must arrive with a session for the church that started the flow (an authorisation link sent to someone else connects nothing).

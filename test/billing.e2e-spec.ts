@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { FakePaymentAdapter } from '../src/modules/billing/infrastructure/providers/fake-payment.adapter.js';
+import { FakePaymentAdapter } from '../src/modules/billing/adapters/fake-payment.adapter.js';
 import { Client, createTestApp, type TestApp } from './support/test-app.js';
 
 describe('billing, plan limits and webhooks (e2e)', () => {
@@ -23,30 +23,29 @@ describe('billing, plan limits and webhooks (e2e)', () => {
   });
   afterAll(() => t.close());
 
-  it('starts on the free plan with customer-friendly usage', async () => {
+  it('starts on the Standard free trial with customer-friendly usage', async () => {
     const subscription = await client.get('/billing/subscription').expect(200);
     expect(subscription.body).toEqual({
-      planId: 'free',
-      planName: 'Free',
-      priceLabel: 'Free',
-      status: 'ACTIVE',
-      currentPeriodEnd: '2026-10-31T23:00:00.000Z',
+      planId: 'standard',
+      planName: 'Standard',
+      priceLabel: '₦7,000 / month',
+      status: 'TRIALING',
+      currentPeriodEnd: '2026-11-05T09:00:00.000Z',
       features: {
-        sourceRetentionDays: 3,
+        sourceRetentionDays: 14,
       },
     });
     const usage = await client.get('/billing/usage').expect(200);
     expect(usage.body).toEqual({
       sermonsUsed: 0,
-      sermonsLimit: 2,
+      sermonsLimit: 15,
       contentGenerated: 0,
-      periodEnd: '2026-10-31T23:00:00.000Z',
+      periodEnd: '2026-11-05T09:00:00.000Z',
     });
   });
 
   it('enforces the sermon allowance', async () => {
-    await client.createSermon('One');
-    await client.createSermon('Two');
+    for (let i = 0; i < 15; i++) await client.createSermon(`Sermon ${i}`);
     const audio = Buffer.from('x');
     const presign = await client
       .post('/uploads/presign', {
@@ -74,16 +73,28 @@ describe('billing, plan limits and webhooks (e2e)', () => {
     ).toBeNull();
   });
 
+  it('prevents charging during the free month and rejects old plans', async () => {
+    const response = await client.post('/billing/portal', {}, { 'Idempotency-Key': 'trial-portal-0001' }).expect(409);
+    expect(response.body.code).toBe('TRIAL_ACTIVE');
+    await client.post('/billing/checkout', { planId: 'growth' }, { 'Idempotency-Key': 'old-plan-0001' }).expect(422);
+  });
+
+  it('expires the trial without granting another free month', async () => {
+    t.infra.clock.set('2026-11-05T09:00:00Z');
+    await client.login();
+    expect((await client.get('/billing/subscription')).body.status).toBe('EXPIRED');
+  });
+
   it('creates checkout and portal links (never trusting client payment status)', async () => {
     const checkout = await client
       .post(
         '/billing/checkout',
-        { planId: 'starter' },
+        { planId: 'standard' },
         { 'Idempotency-Key': 'test-key-bill-0001' },
       )
       .expect(200);
     expect(checkout.body.url).toBe(
-      'http://web.test/billing?mockCheckout=starter',
+      'http://web.test/billing?mockCheckout=standard',
     );
     const portal = await client
       .post(
@@ -92,9 +103,9 @@ describe('billing, plan limits and webhooks (e2e)', () => {
         { 'Idempotency-Key': 'test-key-portal-0002' },
       )
       .expect(200);
-    expect(portal.body.url).toContain('mockCheckout=growth');
+    expect(portal.body.url).toContain('mockCheckout=standard');
     expect((await client.get('/billing/subscription')).body.planId).toBe(
-      'free',
+      'standard',
     );
   });
 
@@ -104,16 +115,16 @@ describe('billing, plan limits and webhooks (e2e)', () => {
         id: 'evt-bad',
         type: 'charge.success',
         kind: 'PAYMENT_SUCCEEDED',
-        amountKobo: 2_500_000,
+        amountKobo: 700_000,
         currency: 'NGN',
         churchId,
-        planId: 'growth',
+        planId: 'standard',
       },
       'deadbeef',
     ).expect(401);
     expect(response.body.code).toBe('INVALID_SIGNATURE');
     expect((await client.get('/billing/subscription')).body.planId).toBe(
-      'free',
+      'standard',
     );
   });
 
@@ -123,7 +134,7 @@ describe('billing, plan limits and webhooks (e2e)', () => {
       type: 'charge.success',
       kind: 'PAYMENT_SUCCEEDED',
       churchId,
-      planId: 'ministry',
+      planId: 'standard',
       amountKobo: 10_000,
       currency: 'NGN',
     }).expect(200);
@@ -132,12 +143,12 @@ describe('billing, plan limits and webhooks (e2e)', () => {
       type: 'charge.success',
       kind: 'PAYMENT_SUCCEEDED',
       churchId,
-      planId: 'growth',
-      amountKobo: 2_500_000,
+      planId: 'standard',
+      amountKobo: 700_000,
       currency: 'USD',
     }).expect(200);
     expect((await client.get('/billing/subscription')).body.planId).toBe(
-      'free',
+      'standard',
     );
   });
 
@@ -146,28 +157,28 @@ describe('billing, plan limits and webhooks (e2e)', () => {
       id: 'evt-1',
       type: 'charge.success',
       kind: 'PAYMENT_SUCCEEDED',
-      amountKobo: 2_500_000,
+      amountKobo: 700_000,
       currency: 'NGN',
       churchId,
       customerCode: 'CUS_1',
-      planId: 'growth',
+      planId: 'standard',
       subscriptionCode: 'SUB_1',
-      nextPaymentDate: '2026-11-05T09:00:00.000Z',
+      nextPaymentDate: '2026-12-05T09:00:00.000Z',
     };
     await sendWebhook(event).expect(200);
     await sendWebhook(event).expect(200);
     const subscription = await client.get('/billing/subscription').expect(200);
     expect(subscription.body).toMatchObject({
-      planId: 'growth',
-      planName: 'Growth',
-      priceLabel: '₦25,000 / month',
+      planId: 'standard',
+      planName: 'Standard',
+      priceLabel: '₦7,000 / month',
       status: 'ACTIVE',
-      currentPeriodEnd: '2026-11-05T09:00:00.000Z',
+      currentPeriodEnd: '2026-12-05T09:00:00.000Z',
     });
     expect((await client.get('/billing/usage')).body.sermonsLimit).toBe(15);
     expect(t.infra.db.webhookEvents.has('fake:evt-1')).toBe(true);
     expect(t.infra.db.allowances.get(churchId)).toMatchObject({
-      planId: 'growth',
+      planId: 'standard',
       sermonsLimit: 15,
     });
 
@@ -200,10 +211,10 @@ describe('billing, plan limits and webhooks (e2e)', () => {
     expect(unknown.body.code).toBe('RETRY_LATER');
     expect(t.infra.db.webhookEvents.has('fake:evt-3')).toBe(false); // not recorded, so the redelivery is processed
 
-    t.infra.clock.set('2026-11-06T09:00:00Z');
+    t.infra.clock.set('2026-12-06T09:00:00Z');
     await client.login(); // a month later the earlier session has expired
     expect((await client.get('/billing/subscription')).body.planId).toBe(
-      'free',
+      'standard',
     );
   });
 });

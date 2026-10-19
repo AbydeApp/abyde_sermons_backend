@@ -2,8 +2,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CHURCH_PROFILE, type ChurchProfilePort } from '../../shared/application/church-profile.js';
 import { CACHE, type CachePort } from '../../shared/application/ports/cache.port.js';
 import type { Page, PageRequest } from '../../shared/domain/pagination.js';
-import { SERMON_QUERY, type SermonQueryPort, type SermonView } from '../sermons/application/ports/out/sermon-repository.port.js';
-import { TRANSCRIPT_REPOSITORY, type TranscriptRepositoryPort } from '../sermons/application/ports/out/transcript-repository.port.js';
+import { SERMON_QUERY, type SermonQueryPort } from '../sermons/sermons.repository.js';
+import { type SermonView } from '../sermons/helper.js';
+import { TRANSCRIPT_REPOSITORY, type TranscriptRepositoryPort } from '../sermons/sermons.repository.js';
 import { GROUNDED_ANSWER, type GroundedAnswerPort, SEGMENT_SEARCH, type SegmentSearchPort } from './adapters/ports.js';
 import { LIBRARY_FACETS, type LibraryFacets, type LibraryFacetsPort } from './library.repository.js';
 import {

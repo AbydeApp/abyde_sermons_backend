@@ -11,7 +11,7 @@ import { USAGE_METER, type UsageMeterPort } from '../../shared/application/ports
 import { notFound } from '../../shared/domain/domain-error.js';
 import { newId } from '../../shared/domain/id.js';
 import { CONTENT_REPOSITORY, type ContentRepositoryPort } from '../content/content.repository.js';
-import { SCRATCH_SPACE, type ScratchSpacePort } from '../sermons/application/ports/out/processing.ports.js';
+import { SCRATCH_SPACE, type ScratchSpacePort } from '../sermons/adapters/ports.js';
 import {
   BRAND_RENDERER, type BrandRenderingPort, MEDIA_OBSERVER, MEDIA_SETTINGS, type MediaObserverPort, type MediaSettings,
   type RenderedMedia, SERMON_MEDIA, type SermonMediaPort,

@@ -1,4 +1,4 @@
-import type { SegmentMatch } from '../../sermons/application/ports/out/transcript-repository.port.js';
+import type { SegmentMatch } from '../../sermons/sermons.repository.js';
 
 export const SEGMENT_SEARCH = Symbol('SEGMENT_SEARCH');
 

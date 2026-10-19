@@ -6,6 +6,7 @@ NestJS modular monolith, hexagonal (ports & adapters), PostgreSQL + pgvector, Re
 
 - Product/API specification: [docs/SPEC.md](docs/SPEC.md)
 - Architecture and design decisions: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- Current billing plan and trial contract: [docs/BILLING.md](docs/BILLING.md)
 - Database migration policy: [docs/MIGRATIONS.md](docs/MIGRATIONS.md)
 - Deployment and operations: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 - Engineering rules for contributors and agents: [CLAUDE.md](CLAUDE.md)

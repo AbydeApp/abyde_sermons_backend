@@ -257,10 +257,33 @@ export class ConnectionWriter {
   }
 }
 
+export interface AuthorizationOutcome {
+  provider: SocialProviderId;
+  /** Set when exactly one account was connected (or reconnected). */
+  connectionId?: string;
+  /** Set when the grant has several accounts and the user must choose which to connect. */
+  selectionId?: string;
+}
+
+const noAccounts = () =>
+  new DomainError('UNPROCESSABLE', 'NO_ACCOUNTS', 'No accounts were available to connect.');
+const connectionFailed = () =>
+  new DomainError('UNAVAILABLE', 'CONNECTION_FAILED', 'We could not complete the connection. Please try again.');
+const accountMismatch = () =>
+  new DomainError('UNPROCESSABLE', 'ACCOUNT_MISMATCH', 'That is a different account from the one you are reconnecting.');
+
+const invalidState = () =>
+  new DomainError(
+    'UNPROCESSABLE',
+    'INVALID_OAUTH_STATE',
+    'This connection link is invalid or has expired. Start again.',
+  );
+
 /**
- * OAuth callback. Never throws to the browser: every outcome is a redirect to the web app.
- * Requires the single-use state AND a session for the same church and user that started the
- * flow, so an authorisation link sent to someone else connects nothing (CSRF / replay safe).
+ * Finishes an OAuth grant. A browser redirect from the provider carries no access token, so the
+ * web app calls this itself with the code and state from the redirect. It needs the single-use
+ * state AND the signed-in church and user that started the flow, so an authorisation link sent to
+ * someone else connects nothing (CSRF / replay safe).
  */
 @Injectable()
 export class CompleteSocialAuthorizationUseCase {
@@ -278,25 +301,32 @@ export class CompleteSocialAuthorizationUseCase {
     @Inject(SOCIAL_SETTINGS) private readonly settings: SocialSettings,
   ) {}
 
-  async execute(
+  /** Where the provider redirect is forwarded; the web app completes the flow from there. */
+  forwardUrl(
     provider: SocialProviderId,
     input: { code?: string; state?: string; error?: string },
-    caller: Actor | null,
-  ): Promise<string> {
-    const back = (params: Record<string, string>) =>
-      `${this.settings.webUrl}/social/connections?${new URLSearchParams({ provider, ...params }).toString()}`;
-    if (!input.state) return back({ error: 'invalid_state' });
+  ): string {
+    const query = new URLSearchParams({ provider });
+    for (const [key, value] of Object.entries(input))
+      if (value !== undefined) query.set(key, value);
+    return `${this.settings.webUrl}/social-accounts/callback?${query.toString()}`;
+  }
+
+  async execute(
+    provider: SocialProviderId,
+    input: { code: string; state: string },
+    caller: Actor,
+  ): Promise<AuthorizationOutcome> {
     const pending = await this.cache.take<PendingAuthorization>(
       stateKey(this.tokens.hash(input.state)),
     );
-    if (!pending || pending.provider !== provider)
-      return back({ error: 'invalid_state' });
     if (
-      caller?.churchId !== pending.churchId ||
+      !pending ||
+      pending.provider !== provider ||
+      caller.churchId !== pending.churchId ||
       caller.userId !== pending.userId
     )
-      return back({ error: 'invalid_session' });
-    if (input.error || !input.code) return back({ error: 'access_denied' });
+      throw invalidState();
     const actor: Actor = { churchId: pending.churchId, userId: pending.userId };
 
     let accounts: ConnectedAccount[];
@@ -325,15 +355,12 @@ export class CompleteSocialAuthorizationUseCase {
         },
         'Social OAuth exchange failed',
       );
-      return back({
-        error:
-          error instanceof SocialProviderError &&
-          error.code === 'PERMISSION_DENIED'
-            ? 'no_accounts'
-            : 'connection_failed',
-      });
+      throw error instanceof SocialProviderError &&
+        error.code === 'PERMISSION_DENIED'
+        ? noAccounts()
+        : connectionFailed();
     }
-    if (accounts.length === 0) return back({ error: 'no_accounts' });
+    if (accounts.length === 0) throw noAccounts();
     const grantId = newId();
 
     if (pending.reconnectConnectionId) {
@@ -346,9 +373,9 @@ export class CompleteSocialAuthorizationUseCase {
           account.platform === connection?.platform &&
           account.providerAccountId === connection.providerAccountId,
       );
-      if (!connection || !match) return back({ error: 'account_mismatch' });
+      if (!connection || !match) throw accountMismatch();
       await this.writer.persist(actor, provider, grantId, [match], true);
-      return back({ connected: connection.id });
+      return { provider, connectionId: connection.id };
     }
     if (accounts.length === 1) {
       const [connection] = await this.writer.persist(
@@ -357,7 +384,7 @@ export class CompleteSocialAuthorizationUseCase {
         grantId,
         accounts,
       );
-      return back({ connected: connection?.id ?? '' });
+      return { provider, connectionId: connection?.id };
     }
     // Several Pages / channels / organisations: the user chooses before anything is stored.
     const selectionId = newId();
@@ -388,7 +415,7 @@ export class CompleteSocialAuthorizationUseCase {
       },
       SELECTION_TTL_SECONDS,
     );
-    return back({ selection: selectionId });
+    return { provider, selectionId };
   }
 }
 

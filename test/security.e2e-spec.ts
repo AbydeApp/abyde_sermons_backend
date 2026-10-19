@@ -27,7 +27,7 @@ describe('HTTP security and conventions (e2e)', () => {
       .expect(403);
   });
 
-  it('serves CORS only to the allowlist, with credentials', async () => {
+  it('serves CORS only to the allowlist, for bearer auth (no credentials)', async () => {
     const allowed = await request(t.app.getHttpServer())
       .options('/api/v1/auth/me')
       .set('Origin', 'http://web.test')
@@ -35,7 +35,10 @@ describe('HTTP security and conventions (e2e)', () => {
     expect(allowed.headers['access-control-allow-origin']).toBe(
       'http://web.test',
     );
-    expect(allowed.headers['access-control-allow-credentials']).toBe('true');
+    expect(allowed.headers['access-control-allow-credentials']).toBeUndefined();
+    expect(allowed.headers['access-control-allow-headers']).toContain(
+      'Authorization',
+    );
     const denied = await request(t.app.getHttpServer())
       .options('/api/v1/auth/me')
       .set('Origin', 'https://evil.example')
@@ -133,18 +136,18 @@ describe('HTTP security and conventions (e2e)', () => {
     const first = await client
       .post(
         '/billing/checkout',
-        { planId: 'starter' },
+        { planId: 'standard' },
         { 'Idempotency-Key': 'checkout-key-0001' },
       )
-      .expect(200);
+      .expect(409);
     const replay = await client
       .post(
         '/billing/checkout',
-        { planId: 'starter' },
+        { planId: 'standard' },
         { 'Idempotency-Key': 'checkout-key-0001' },
       )
-      .expect(200);
-    expect(replay.body).toEqual(first.body);
+      .expect(409);
+    expect(replay.body).toMatchObject({ code: first.body.code, message: first.body.message, statusCode: first.body.statusCode });
     expect(replay.headers['idempotent-replayed']).toBe('true');
   });
 

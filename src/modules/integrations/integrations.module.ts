@@ -1,23 +1,16 @@
 import { Global, Module } from '@nestjs/common';
-import {
-  CompleteOAuthUseCase,
-  ConnectIntegrationUseCase,
-  DisconnectIntegrationUseCase,
-  IntegrationCredentialsService,
-  ListIntegrationsUseCase,
-} from './application/use-cases/integration.use-cases.js';
-import { IntegrationsController } from './presentation/http/integrations.controller.js';
+import { IntegrationsController } from './integrations.controller.js';
+import { IntegrationsService } from './integrations.service.js';
+import { PublishingService } from './publishing.service.js';
 
+/**
+ * Messaging and email connections, and the background publishing that uses them. Repositories and
+ * provider adapters are bound by the composition root.
+ */
 @Global()
 @Module({
   controllers: [IntegrationsController],
-  providers: [
-    ListIntegrationsUseCase,
-    ConnectIntegrationUseCase,
-    CompleteOAuthUseCase,
-    DisconnectIntegrationUseCase,
-    IntegrationCredentialsService,
-  ],
-  exports: [IntegrationCredentialsService],
+  providers: [IntegrationsService, PublishingService],
+  exports: [IntegrationsService],
 })
 export class IntegrationsModule {}

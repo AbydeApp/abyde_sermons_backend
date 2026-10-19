@@ -283,7 +283,7 @@ describe('critical sermon-to-calendar flow (e2e)', () => {
     });
 
     const usage = await client.get('/billing/usage').expect(200);
-    expect(usage.body).toMatchObject({ sermonsUsed: 1, sermonsLimit: 2 });
+    expect(usage.body).toMatchObject({ sermonsUsed: 1, sermonsLimit: 15 });
     expect(usage.body.contentGenerated).toBe(
       finished.body.jobs.length > 0
         ? (await client.get(`/content?sermonId=${sermonId}&pageSize=100`)).body

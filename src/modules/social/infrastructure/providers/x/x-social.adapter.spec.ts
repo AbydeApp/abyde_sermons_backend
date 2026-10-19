@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { StoragePort } from '../../../../../shared/application/ports/storage.port.js';
-import type { ScratchSpacePort } from '../../../../sermons/application/ports/out/processing.ports.js';
+import type { ScratchSpacePort } from '../../../../sermons/adapters/ports.js';
 import type {
   CheckPublicationInput,
   PublishInput,

@@ -1,20 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  SERMON_REPOSITORY,
-  type SermonRepositoryPort,
-} from '../../sermons/application/ports/out/sermon-repository.port.js';
-import {
-  INTELLIGENCE_REPOSITORY,
-  type IntelligenceRepositoryPort,
-  TRANSCRIPT_REPOSITORY,
-  type TranscriptRepositoryPort,
-} from '../../sermons/application/ports/out/transcript-repository.port.js';
-import type { SermonStatus } from '../../sermons/domain/processing.js';
+import { SERMON_REPOSITORY, type SermonRepositoryPort } from '../../sermons/sermons.repository.js';
+import { INTELLIGENCE_REPOSITORY, type IntelligenceRepositoryPort, TRANSCRIPT_REPOSITORY, type TranscriptRepositoryPort } from '../../sermons/sermons.repository.js';
+import type { SermonStatus } from '../../sermons/helper.js';
 import type {
   ScriptureReferenceRecord,
   SermonIntelligence,
   TranscriptSegmentRecord,
-} from '../../sermons/domain/sermon-intelligence.js';
+} from '../../sermons/helper.js';
 
 /** Everything content generation needs to stay grounded in one sermon of one church. */
 export interface SermonContext {

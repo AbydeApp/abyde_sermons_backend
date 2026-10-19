@@ -1,16 +1,13 @@
 import { Global, Module } from '@nestjs/common';
 import { PLAN_ENTITLEMENTS } from '../../shared/application/ports/plan-entitlements.port.js';
-import { SERMON_QUOTA } from '../sermons/application/ports/out/processing.ports.js';
+import { SERMON_QUOTA } from '../sermons/adapters/ports.js';
 import {
-  CreateCheckoutUseCase,
-  CreatePortalUseCase,
+  BillingService,
   EntitlementService,
-  GetSubscriptionUseCase,
-  GetUsageUseCase,
-  HandleBillingWebhookUseCase,
+  BillingWebhookService,
   SermonQuotaService,
-} from './application/use-cases/billing.use-cases.js';
-import { BillingController } from './presentation/http/billing.controller.js';
+} from './billing.service.js';
+import { BillingController } from './billing.controller.js';
 
 /**
  * Global so other modules can enforce plan limits (SERMON_QUOTA, PLAN_ENTITLEMENTS) without
@@ -20,12 +17,9 @@ import { BillingController } from './presentation/http/billing.controller.js';
 @Module({
   controllers: [BillingController],
   providers: [
+    BillingService,
     EntitlementService,
-    GetSubscriptionUseCase,
-    GetUsageUseCase,
-    CreateCheckoutUseCase,
-    CreatePortalUseCase,
-    HandleBillingWebhookUseCase,
+    BillingWebhookService,
     { provide: SERMON_QUOTA, useClass: SermonQuotaService },
     { provide: PLAN_ENTITLEMENTS, useExisting: EntitlementService },
   ],

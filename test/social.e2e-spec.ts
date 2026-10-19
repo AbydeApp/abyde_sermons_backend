@@ -16,7 +16,10 @@ describe('social publishing (e2e)', () => {
   });
   const dispatch = () => t.app.get(DispatchDueSocialPostsUseCase).execute();
 
-  /** Runs the OAuth round trip for a provider and returns the web-app redirect. */
+  /**
+   * Runs the OAuth round trip for a provider: the provider redirect is forwarded to the web app,
+   * which completes the connection with its own sign-in. Returns the completion response.
+   */
   const oauth = async (
     client: Client,
     provider: string,
@@ -31,7 +34,14 @@ describe('social publishing (e2e)', () => {
     const callback = await client
       .get(`/social/oauth/${provider}/callback?code=${code}&state=${state}`)
       .expect(302);
-    return { location: new URL(callback.headers.location as string), state };
+    expect(callback.headers.location).toBe(
+      `http://web.test/social-accounts/callback?provider=${provider}&code=${code}&state=${state}`,
+    );
+    const done = await client.post(`/social/oauth/${provider}/complete`, {
+      code,
+      state,
+    });
+    return { done, state };
   };
 
   const createPost = (client: Client, targets: object[], extra: object = {}) =>
@@ -96,7 +106,7 @@ describe('social publishing (e2e)', () => {
     });
 
     it('lets the user choose among several Pages and accounts before storing anything', async () => {
-      const { location, state } = await oauth(
+      const { done, state } = await oauth(
         a,
         'meta',
         '?platforms=facebook,instagram',
@@ -105,16 +115,16 @@ describe('social publishing (e2e)', () => {
         'facebook',
         'instagram',
       ]);
-      const selectionId = location.searchParams.get('selection') ?? '';
-      expect(location.pathname).toBe('/social/connections');
+      expect(done.status).toBe(200);
+      const selectionId = (done.body.selectionId as string | undefined) ?? '';
       expect(selectionId).not.toBe('');
       expect((await a.get('/social/connections')).body).toEqual([]);
 
       // Replaying the state connects nothing.
       const replay = await a
-        .get(`/social/oauth/meta/callback?code=good-code&state=${state}`)
-        .expect(302);
-      expect(replay.headers.location).toContain('error=invalid_state');
+        .post('/social/oauth/meta/complete', { code: 'good-code', state })
+        .expect(422);
+      expect(replay.body.code).toBe('INVALID_OAUTH_STATE');
 
       // The selection belongs to this church and user only.
       await b.get(`/social/connections/selections/${selectionId}`).expect(404);
@@ -161,10 +171,8 @@ describe('social publishing (e2e)', () => {
         },
       ];
       for (const provider of ['x', 'tiktok', 'youtube']) {
-        const { location } = await oauth(a, provider);
-        expect(location.searchParams.get('connected')).toEqual(
-          expect.any(String),
-        );
+        const { done } = await oauth(a, provider);
+        expect(done.body.connectionId).toEqual(expect.any(String));
       }
       const list = (await a.get('/social/connections').expect(200))
         .body as Array<Record<string, unknown>>;
@@ -190,20 +198,19 @@ describe('social publishing (e2e)', () => {
       );
     });
 
-    it('rejects callbacks without the session that started the flow', async () => {
+    it('rejects completions from a different signed-in user than the one that started the flow', async () => {
       const start = await a
         .get('/social/connections/linkedin/authorize')
         .expect(200);
       const state =
         new URL(start.body.authorizationUrl).searchParams.get('state') ?? '';
       const hijack = await b
-        .get(`/social/oauth/linkedin/callback?code=good-code&state=${state}`)
-        .expect(302);
-      expect(hijack.headers.location).toContain('error=invalid_session');
+        .post('/social/oauth/linkedin/complete', { code: 'good-code', state })
+        .expect(422);
+      expect(hijack.body.code).toBe('INVALID_OAUTH_STATE');
       const failed = await oauth(a, 'linkedin', '', 'bad-code');
-      expect(failed.location.searchParams.get('error')).toBe(
-        'connection_failed',
-      );
+      expect(failed.done.status).toBe(503);
+      expect(failed.done.body.code).toBe('CONNECTION_FAILED');
       await a.get('/social/connections/myspace/authorize').expect(404);
       await a
         .get('/social/connections/meta/authorize?platforms=tiktok')
@@ -501,11 +508,9 @@ describe('social publishing (e2e)', () => {
         new URL(start.body.authorizationUrl).searchParams.get('state') ?? '';
       t.infra.social.tiktok.accounts = [{ platform: 'tiktok' }];
       const back = await a
-        .get(`/social/oauth/tiktok/callback?code=again&state=${state}`)
-        .expect(302);
-      expect(back.headers.location).toContain(
-        `connected=${connections.tiktok}`,
-      );
+        .post('/social/oauth/tiktok/complete', { code: 'again', state })
+        .expect(200);
+      expect(back.body.connectionId).toBe(connections.tiktok);
       expect(
         (await a.get('/social/connections')).body.find(
           (c: { id: string }) => c.id === connections.tiktok,

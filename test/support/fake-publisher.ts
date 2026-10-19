@@ -1,8 +1,4 @@
-import type {
-  PublishInput,
-  PublishingProviderPort,
-  PublishResult,
-} from '../../src/modules/publishing/application/ports/out/publishing.ports.js';
+import type { PublishInput, PublishingProviderPort, PublishResult } from '../../src/modules/integrations/adapters/ports.js';
 
 /** Records publishes in memory. */
 export class FakePublisher implements PublishingProviderPort {

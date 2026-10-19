@@ -407,6 +407,7 @@ export function applyChurchPatch(
 }
 
 export function newChurchRecord(input: {
+  createdAt: Date;
   id: string;
   userId: string;
   name: string;
@@ -416,6 +417,7 @@ export function newChurchRecord(input: {
   const church = applyChurchPatch(
     {
       id: input.id,
+      createdAt: input.createdAt,
       userId: input.userId,
       name: '',
       slug: '',
@@ -440,7 +442,7 @@ export function newChurchRecord(input: {
 }
 
 export function toChurchView(church: ChurchRecord): ChurchView {
-  const { userId: _userId, ...view } = church;
+  const { userId: _userId, createdAt: _createdAt, ...view } = church;
   return view;
 }
 

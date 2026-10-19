@@ -9,8 +9,8 @@ import {
   AUTH_REPOSITORY,
   PrismaAuthRepository,
 } from '../modules/auth/auth.repository.js';
-import { SUBSCRIPTION_REPOSITORY } from '../modules/billing/application/ports/out/billing.ports.js';
-import { PrismaSubscriptionRepository } from '../modules/billing/infrastructure/persistence/prisma-subscription.repository.js';
+import { SUBSCRIPTION_REPOSITORY } from '../modules/billing/billing.repository.js';
+import { PrismaSubscriptionRepository } from '../modules/billing/billing.repository.js';
 import {
   CALENDAR_REPOSITORY,
   CONTENT_QUERY,
@@ -23,30 +23,18 @@ import {
   PrismaContentRepository,
   PrismaGenerationRepository,
 } from '../modules/content/content.repository.js';
-import { INTEGRATION_REPOSITORY } from '../modules/integrations/application/ports/out/integration.ports.js';
-import { PrismaIntegrationRepository } from '../modules/integrations/infrastructure/persistence/prisma-integration.repository.js';
+import {
+  INTEGRATION_REPOSITORY,
+  PrismaIntegrationRepository,
+  PrismaPublishingRepository,
+  PUBLISHING_REPOSITORY,
+} from '../modules/integrations/integrations.repository.js';
 import { LIBRARY_FACETS } from '../modules/library/library.repository.js';
 import { PrismaLibraryFacets } from '../modules/library/library.repository.js';
-import { PUBLISHING_REPOSITORY } from '../modules/publishing/application/ports/out/publishing.ports.js';
-import { PrismaPublishingRepository } from '../modules/publishing/infrastructure/persistence/prisma-publishing.repository.js';
-import {
-  SERMON_QUERY,
-  SERMON_REPOSITORY,
-} from '../modules/sermons/application/ports/out/sermon-repository.port.js';
-import {
-  EMBEDDING_REPOSITORY,
-  INTELLIGENCE_REPOSITORY,
-  TRANSCRIPT_REPOSITORY,
-} from '../modules/sermons/application/ports/out/transcript-repository.port.js';
-import {
-  PrismaSermonQuery,
-  PrismaSermonRepository,
-} from '../modules/sermons/infrastructure/persistence/prisma-sermon.repositories.js';
-import {
-  PrismaEmbeddingRepository,
-  PrismaIntelligenceRepository,
-  PrismaTranscriptRepository,
-} from '../modules/sermons/infrastructure/persistence/prisma-transcript.repositories.js';
+import { SERMON_QUERY, SERMON_REPOSITORY } from '../modules/sermons/sermons.repository.js';
+import { EMBEDDING_REPOSITORY, INTELLIGENCE_REPOSITORY, TRANSCRIPT_REPOSITORY } from '../modules/sermons/sermons.repository.js';
+import { PrismaSermonQuery, PrismaSermonRepository } from '../modules/sermons/sermons.repository.js';
+import { PrismaEmbeddingRepository, PrismaIntelligenceRepository, PrismaTranscriptRepository } from '../modules/sermons/sermons.repository.js';
 import { UPLOAD_REPOSITORY } from '../modules/uploads/uploads.repository.js';
 import { PrismaUploadRepository } from '../modules/uploads/uploads.repository.js';
 import { USAGE_QUERY } from '../modules/usage/usage.repository.js';

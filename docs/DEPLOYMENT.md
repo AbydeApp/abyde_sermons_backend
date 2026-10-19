@@ -45,7 +45,7 @@ Validated at startup. The process exits on invalid config. Full list with descri
 |---|---|---|
 | `APP_ENV` | `staging` | `production`: fakes, memory storage and outbox email are rejected |
 | `APP_CORS_ORIGINS`, `APP_WEB_URL`, `APP_PUBLIC_API_URL` | staging web/API URLs | production URLs |
-| `AUTH_COOKIE_DOMAIN` | parent domain shared by web and API | same |
+| `AUTH_ACCESS_TOKEN_SECRET` | 32+ random characters (**required**: the dev default is rejected) | separate secret; rotating it signs everyone out of their access tokens |
 | `AI_PROVIDER` / `TRANSCRIPTION_PROVIDER` | `openai` (or `fake` for cheap staging) | `openai` |
 | `BILLING_PROVIDER` | `paystack` (test keys) | `paystack` (live keys + plan codes) |
 | `EMAIL_PROVIDER` | `resend` | `resend` |
@@ -53,7 +53,7 @@ Validated at startup. The process exits on invalid config. Full list with descri
 | `PUBLISHING_ENCRYPTION_KEY` | `openssl rand -base64 32` | separate key; **back it up**: losing it invalidates stored integration tokens |
 | `OBSERVABILITY_METRICS_TOKEN`, `OBSERVABILITY_SENTRY_DSN` | set | set |
 
-Staging and production both refuse to start with: localhost or plain-http web/API/CORS URLs, `AUTH_COOKIE_SECURE=false`, the fake billing provider, a missing `PUBLISHING_ENCRYPTION_KEY`, a metrics token shorter than 24 characters, or Paystack without all three plan codes. `/metrics` returns 404 without a token outside local development.
+Staging and production both refuse to start with: localhost or plain-http web/API/CORS URLs, the development access-token secret, the fake billing provider, a missing `PUBLISHING_ENCRYPTION_KEY`, a metrics token shorter than 24 characters, or Paystack without all three plan codes. `/metrics` returns 404 without a token outside local development.
 
 Secrets belong in the platform's secret store, never in the repository.
 

@@ -8,7 +8,7 @@ export interface SecretBoxPort {
 
 export const TOKEN_GENERATOR = Symbol('TOKEN_GENERATOR');
 
-/** Opaque bearer secrets (session cookies, reset tokens): only the hash is ever persisted. */
+/** Opaque bearer secrets (refresh tokens, reset tokens): only the hash is ever persisted. */
 export interface TokenGeneratorPort {
   generate(): { token: string; hash: string };
   hash(token: string): string;

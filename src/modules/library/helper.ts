@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { pageQuery } from '../../shared/infrastructure/http/pagination.js';
-import type { SermonFilter } from '../sermons/application/ports/out/sermon-repository.port.js';
+import type { SermonFilter } from '../sermons/helper.js';
 
 // ───────────────────────── Constants ─────────────────────────
 

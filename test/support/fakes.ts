@@ -1,12 +1,9 @@
 import type {
   MediaProcessorPort,
   PreparedMedia,
-} from '../../src/modules/sermons/application/ports/out/processing.ports.js';
-import type {
-  OAuthConnection,
-  OAuthProviderPort,
-} from '../../src/modules/integrations/application/ports/out/integration.ports.js';
-import type { IntegrationProvider } from '../../src/modules/integrations/domain/integration.js';
+} from '../../src/modules/sermons/adapters/ports.js';
+import type { OAuthConnection, OAuthProviderPort } from '../../src/modules/integrations/adapters/ports.js';
+import type { IntegrationProvider } from '../../src/modules/integrations/helper.js';
 
 /** Media processing double: no ffmpeg in unit/e2e tests; reports a 10-minute single chunk. */
 export class FakeMediaProcessor implements MediaProcessorPort {

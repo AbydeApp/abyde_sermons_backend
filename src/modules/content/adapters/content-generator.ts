@@ -17,8 +17,8 @@ import {
 import {
   buildTranscriptContext,
   GUARDRAILS,
-} from '../../sermons/application/services/prompt-context.js';
-import type { TranscriptSegmentRecord } from '../../sermons/domain/sermon-intelligence.js';
+} from '../../sermons/helper.js';
+import type { TranscriptSegmentRecord } from '../../sermons/helper.js';
 import {
   type AIAttribution,
   CONTENT_SPECS,

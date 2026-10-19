@@ -1,7 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import cookieParser from 'cookie-parser';
 import express, {
   type NextFunction,
   type Request,
@@ -50,12 +49,10 @@ export function configureApp(
         ? transcriptBodyParser(req, res, next)
         : next(),
   );
-  app.use(cookieParser());
   app.enableCors({
     origin: config.APP_CORS_ORIGINS,
-    credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Idempotency-Key', 'X-Request-Id'],
+    allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'X-Request-Id'],
     exposedHeaders: ['X-Request-Id', 'Idempotent-Replayed', 'Retry-After'],
     maxAge: 600,
   });
@@ -70,7 +67,7 @@ export function configureApp(
       new DocumentBuilder()
         .setTitle('Abyde Sermon API')
         .setVersion('1')
-        .addCookieAuth(config.AUTH_COOKIE_NAME)
+        .addBearerAuth()
         .build(),
     );
     SwaggerModule.setup('docs', app, document);

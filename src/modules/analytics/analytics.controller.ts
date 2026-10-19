@@ -1,7 +1,7 @@
 import { Controller, Get, Inject } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CurrentChurchId } from '../../shared/infrastructure/http/auth.decorators.js';
-import { toSermonResponse } from '../sermons/presentation/http/sermon.responses.js';
+import { toSermonResponse } from '../sermons/helper.js';
 import { AnalyticsService } from './analytics.service.js';
 
 @ApiTags('analytics')

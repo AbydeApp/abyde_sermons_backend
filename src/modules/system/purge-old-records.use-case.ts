@@ -7,10 +7,7 @@ import {
   AI_USAGE_RECORDER,
   type AIUsageRecorderPort,
 } from '../../shared/application/ports/usage-meter.port.js';
-import {
-  SUBSCRIPTION_REPOSITORY,
-  type SubscriptionRepositoryPort,
-} from '../billing/application/ports/out/billing.ports.js';
+import { SUBSCRIPTION_REPOSITORY, type SubscriptionRepositoryPort } from '../billing/billing.repository.js';
 
 const DAY_MS = 24 * 3600 * 1000;
 /** Webhook records only guard against replays; providers stop redelivering within days. */

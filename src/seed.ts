@@ -5,7 +5,7 @@ import {
   type AuthRepository,
 } from './modules/auth/auth.repository.js';
 import { AuthService } from './modules/auth/auth.service.js';
-import { CreateSermonUseCase } from './modules/sermons/application/use-cases/sermon-crud.use-cases.js';
+import { SermonsService } from './modules/sermons/sermons.service.js';
 import { APP_CONFIG } from './shared/infrastructure/config/config.module.js';
 import type { AppConfig } from './shared/infrastructure/config/env.schema.js';
 
@@ -99,7 +99,7 @@ async function seed() {
         denomination: demo.church.denomination,
       });
       for (const sermon of demo.sermons)
-        await app.get(CreateSermonUseCase).execute(churchId, sermon);
+        await app.get(SermonsService).create(churchId, sermon);
       console.log(
         `seeded ${demo.user.email} / ${demo.church.name} (password: DemoPass2026)`,
       );

@@ -17,9 +17,8 @@ import { z } from 'zod';
 import type { AuthContext } from '../../../../shared/application/auth-context.js';
 import { notFound } from '../../../../shared/domain/domain-error.js';
 import {
-  CurrentAuth,
   CurrentChurchId,
-  OptionalAuth,
+  Public,
   RequiredAuth,
 } from '../../../../shared/infrastructure/http/auth.decorators.js';
 import { CREDENTIAL_THROTTLE } from '../../../../shared/infrastructure/http/route-limits.js';
@@ -68,6 +67,11 @@ const CallbackQuery = z.object({
   error: z.string().max(256).optional(),
 });
 
+const CompleteBody = z.strictObject({
+  code: z.string().min(1).max(4096),
+  state: z.string().min(1).max(256),
+});
+
 const SelectionBody = z.strictObject({
   accountRefs: z
     .array(z.string().max(10))
@@ -81,9 +85,9 @@ const actorOf = (auth: AuthContext, churchId: string): Actor => ({
 });
 
 /**
- * Connecting accounts. Every route needs a session (the global guard); the provider callback is
- * the only optional-auth route, and it connects nothing unless the session matches the church and
- * user that started the flow.
+ * Connecting accounts. Every route needs a signed-in user (the global guard) except the provider
+ * redirect, which only forwards to the web app; completing a connection needs the church and user
+ * that started the flow.
  */
 @ApiTags('social')
 @Controller('social')
@@ -123,25 +127,30 @@ export class SocialConnectionsController {
     });
   }
 
-  /** Provider redirect target: a top-level navigation, so the SameSite=Lax session cookie is sent. */
-  @OptionalAuth()
+  /**
+   * Provider redirect target. A browser redirect carries no access token, so this only forwards the
+   * result to the web app, which completes the connection with its own sign-in.
+   */
+  @Public()
   @Get('oauth/:provider/callback')
-  async callback(
-    @CurrentAuth() auth: AuthContext | null,
+  callback(
     @Param('provider') provider: string,
     @Query(zod(CallbackQuery)) query: z.infer<typeof CallbackQuery>,
     @Res() res: Response,
   ) {
-    res.redirect(
-      302,
-      await this.complete.execute(
-        providerFrom(provider),
-        query,
-        auth?.churchId
-          ? { churchId: auth.churchId, userId: auth.userId }
-          : null,
-      ),
-    );
+    res.redirect(302, this.complete.forwardUrl(providerFrom(provider), query));
+  }
+
+  @Throttle(CREDENTIAL_THROTTLE)
+  @Post('oauth/:provider/complete')
+  @HttpCode(200)
+  completeAuthorization(
+    @RequiredAuth() auth: AuthContext,
+    @CurrentChurchId() churchId: string,
+    @Param('provider') provider: string,
+    @Body(zod(CompleteBody)) body: z.infer<typeof CompleteBody>,
+  ) {
+    return this.complete.execute(providerFrom(provider), body, actorOf(auth, churchId));
   }
 
   @Get('connections/selections/:selectionId')

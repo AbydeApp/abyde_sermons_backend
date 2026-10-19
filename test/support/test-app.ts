@@ -49,7 +49,7 @@ export async function createTestApp(
   return { app, infra, close: () => app.close() };
 }
 
-/** Cookie-preserving HTTP client for one signed-in user. */
+/** HTTP client for one signed-in user; keeps the access and refresh tokens it is given. */
 export class Client {
   private accessToken = '';
   refreshToken = '';

@@ -30,22 +30,21 @@ if (!audioPath) {
   ]);
 }
 
-let cookie = '';
+let accessToken = '';
 async function api(method, path, body) {
   const response = await fetch(`${base}${path}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
-      ...(cookie ? { Cookie: cookie } : {}),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
-  const setCookie = response.headers.get('set-cookie');
-  if (setCookie) cookie = setCookie.split(';')[0];
   const text = await response.text();
   const json = text ? JSON.parse(text) : null;
   if (!response.ok)
     throw new Error(`${method} ${path} → ${response.status} ${text}`);
+  if (json?.accessToken) accessToken = json.accessToken;
   return json;
 }
 

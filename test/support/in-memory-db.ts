@@ -9,22 +9,22 @@ import type {
 } from '../../src/modules/auth/auth.repository.js';
 import type { ChurchRecord } from '../../src/modules/auth/auth.repository.js';
 import type { UploadRecord } from '../../src/modules/uploads/uploads.repository.js';
-import type { SermonProps } from '../../src/modules/sermons/domain/sermon.entity.js';
-import type { SermonAssetRecord } from '../../src/modules/sermons/application/ports/out/sermon-repository.port.js';
+import type { SermonProps } from '../../src/modules/sermons/helper.js';
+import type { SermonAssetRecord } from '../../src/modules/sermons/helper.js';
 import type {
   ScriptureReferenceRecord,
   SermonIntelligence,
   TranscriptSegmentRecord,
-} from '../../src/modules/sermons/domain/sermon-intelligence.js';
-import type { EmbeddingRow } from '../../src/modules/sermons/application/ports/out/transcript-repository.port.js';
+} from '../../src/modules/sermons/helper.js';
+import type { EmbeddingRow } from '../../src/modules/sermons/sermons.repository.js';
 import type {
   ContentItemProps,
   ContentVersionRecord,
 } from '../../src/modules/content/helper.js';
 import type { CalendarItemProps } from '../../src/modules/content/helper.js';
 import type { GenerationJobRecord } from '../../src/modules/content/helper.js';
-import type { SubscriptionRecord } from '../../src/modules/billing/domain/subscription.js';
-import type { IntegrationRecord } from '../../src/modules/integrations/domain/integration.js';
+import type { SubscriptionRecord } from '../../src/modules/billing/helper.js';
+import type { IntegrationRecord } from '../../src/modules/integrations/helper.js';
 import type { BrandProfile, MediaAsset } from '../../src/modules/brand/helper.js';
 import type { SocialAuditEntry } from '../../src/modules/social/application/ports/out/social-repositories.port.js';
 import type { SocialConnection } from '../../src/modules/social/domain/social-connection.js';
@@ -32,7 +32,7 @@ import type {
   SocialPost,
   SocialPublication,
 } from '../../src/modules/social/domain/social-post.js';
-import type { PublishAttemptRecord } from '../../src/modules/publishing/application/ports/out/publishing.ports.js';
+import type { PublishAttemptRecord } from '../../src/modules/integrations/helper.js';
 
 /**
  * Process-local stand-in for PostgreSQL used by every test. Tests never touch a real database

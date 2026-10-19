@@ -6,7 +6,7 @@ import { CurrentChurchId } from '../../shared/infrastructure/http/auth.decorator
 import { pageRequest, toPaginated } from '../../shared/infrastructure/http/pagination.js';
 import { AI_THROTTLE } from '../../shared/infrastructure/http/route-limits.js';
 import { zod } from '../../shared/infrastructure/http/zod-validation.pipe.js';
-import { toSermonResponse } from '../sermons/presentation/http/sermon.responses.js';
+import { toSermonResponse } from '../sermons/helper.js';
 import { AskBody, SearchBody, SemanticBody } from './helper.js';
 import { LibraryService } from './library.service.js';
 

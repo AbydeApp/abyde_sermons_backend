@@ -20,7 +20,6 @@ import { ContentModule } from './modules/content/content.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { IntegrationsModule } from './modules/integrations/integrations.module.js';
 import { LibraryModule } from './modules/library/library.module.js';
-import { PublishingModule } from './modules/publishing/publishing.module.js';
 import { SermonsModule } from './modules/sermons/sermons.module.js';
 import { SocialModule } from './modules/social/social.module.js';
 import { SystemModule } from './modules/system/system.module.js';
@@ -62,7 +61,6 @@ const BUSINESS_MODULES: ModuleRef[] = [
   LibraryModule,
   BillingModule,
   IntegrationsModule,
-  PublishingModule,
   BrandModule,
   SocialModule,
   AnalyticsModule,

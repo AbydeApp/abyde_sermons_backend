@@ -3,7 +3,7 @@ import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import type { StoragePort } from '../../../../../shared/application/ports/storage.port.js';
-import type { ScratchSpacePort } from '../../../../sermons/application/ports/out/processing.ports.js';
+import type { ScratchSpacePort } from '../../../../sermons/adapters/ports.js';
 
 /**
  * For providers that take bytes rather than a URL (YouTube, X, LinkedIn): the object is streamed

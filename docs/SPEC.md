@@ -1600,7 +1600,7 @@ All paths are relative to `/api/v1`. The web app reads `NEXT_PUBLIC_API_URL` (fo
 - **Market: Nigeria only (V1).** No `country` or `timezone` fields on any model, request or response. All scheduling is interpreted in `Africa/Lagos` (WAT, UTC+1, no DST). Timestamps are ISO-8601 UTC strings.
 - **No notifications in V1.** No Notification model, endpoints, queue, events or per-user notification preferences.
 - **Onboarding completes when the church is created.** `POST /church` sets `onboardingCompleted = true`. There is no separate "complete onboarding" call. Brand, AI preferences and logo are optional and edited later through `PATCH /church`.
-- **Auth transport: httpOnly cookie session.** The browser sends `credentials: include`; no tokens in JS. Requirements: `HttpOnly; Secure; SameSite=Lax` session cookie, CORS allowlist with `Access-Control-Allow-Credentials: true`, CSRF protection for state-changing requests (double-submit token or `Origin`/`Sec-Fetch-Site` validation). `remember: true` on login extends session lifetime.
+- **Auth transport: bearer tokens.** Login and email verification return `accessToken`, `refreshToken` and `expiresIn`; the client sends `Authorization: Bearer <accessToken>` and calls `POST /auth/refresh` when it expires. `remember: true` on login extends the refresh token's lifetime. CORS is an allowlist without credentials. Provider OAuth redirects carry no token, so the web app finishes them with `POST /integrations/:provider/complete` and `POST /social/oauth/:provider/complete`.
 - **Identifiers** are opaque strings. **Transcript times** are milliseconds (`startTimeMs`, `endTimeMs`).
 - **Envelopes** (from the main spec, unchanged):
   - Lists: `{ "data": [...], "meta": { "page", "pageSize", "total", "totalPages" } }`

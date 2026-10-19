@@ -24,31 +24,20 @@ import type {
   UploadRecord,
   UploadRepositoryPort,
 } from '../../src/modules/uploads/uploads.repository.js';
-import { PROCESSING_STATUSES } from '../../src/modules/sermons/domain/processing.js';
+import { PROCESSING_STATUSES } from '../../src/modules/sermons/helper.js';
 import {
   Sermon,
   type SermonProps,
-} from '../../src/modules/sermons/domain/sermon.entity.js';
-import type {
-  SermonAssetRecord,
-  SermonFilter,
-  SermonQueryPort,
-  SermonRepositoryPort,
-  SermonView,
-} from '../../src/modules/sermons/application/ports/out/sermon-repository.port.js';
-import type {
-  EmbeddingRepositoryPort,
-  EmbeddingRow,
-  IntelligenceRepositoryPort,
-  SegmentMatch,
-  TranscriptRepositoryPort,
-} from '../../src/modules/sermons/application/ports/out/transcript-repository.port.js';
-import type { SegmentDraft } from '../../src/modules/sermons/domain/transcript-segmenter.js';
+} from '../../src/modules/sermons/helper.js';
+import type { SermonQueryPort, SermonRepositoryPort } from '../../src/modules/sermons/sermons.repository.js';
+import type { SermonAssetRecord, SermonFilter, SermonView } from '../../src/modules/sermons/helper.js';
+import type { EmbeddingRepositoryPort, EmbeddingRow, IntelligenceRepositoryPort, SegmentMatch, TranscriptRepositoryPort } from '../../src/modules/sermons/sermons.repository.js';
+import type { SegmentDraft } from '../../src/modules/sermons/helper.js';
 import type {
   ScriptureReferenceRecord,
   SermonIntelligence,
   TranscriptSegmentRecord,
-} from '../../src/modules/sermons/domain/sermon-intelligence.js';
+} from '../../src/modules/sermons/helper.js';
 import {
   CalendarItem,
   type CalendarRow,
@@ -68,18 +57,12 @@ import type {
   GenerationRepositoryPort,
 } from '../../src/modules/content/content.repository.js';
 import type { UsageQueryPort } from '../../src/modules/usage/usage.repository.js';
-import type { SubscriptionRecord } from '../../src/modules/billing/domain/subscription.js';
-import type { SubscriptionRepositoryPort } from '../../src/modules/billing/application/ports/out/billing.ports.js';
-import type {
-  IntegrationProvider,
-  IntegrationRecord,
-} from '../../src/modules/integrations/domain/integration.js';
-import type { IntegrationRepositoryPort } from '../../src/modules/integrations/application/ports/out/integration.ports.js';
-import type {
-  DueItem,
-  PublishAttemptRecord,
-  PublishingRepositoryPort,
-} from '../../src/modules/publishing/application/ports/out/publishing.ports.js';
+import type { SubscriptionRecord } from '../../src/modules/billing/helper.js';
+import type { SubscriptionRepositoryPort } from '../../src/modules/billing/billing.repository.js';
+import type { IntegrationProvider, IntegrationRecord } from '../../src/modules/integrations/helper.js';
+import type { IntegrationRepositoryPort } from '../../src/modules/integrations/integrations.repository.js';
+import type { DueItem, PublishAttemptRecord } from '../../src/modules/integrations/helper.js';
+import type { PublishingRepositoryPort } from '../../src/modules/integrations/integrations.repository.js';
 import type {
   LibraryFacets,
   LibraryFacetsPort,
@@ -1239,6 +1222,10 @@ export class InMemorySubscriptionRepository implements SubscriptionRepositoryPor
     private readonly db: InMemoryDb,
     private readonly clock: TestClock,
   ) {}
+
+  async findChurchCreatedAt(churchId: string) {
+    return this.db.churches.get(churchId)?.createdAt ?? null;
+  }
 
   async findByChurch(churchId: string) {
     const row = this.db.subscriptions.get(churchId);

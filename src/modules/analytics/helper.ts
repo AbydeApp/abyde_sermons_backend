@@ -1,4 +1,4 @@
-import type { SermonView } from '../sermons/application/ports/out/sermon-repository.port.js';
+import type { SermonView } from '../sermons/helper.js';
 
 /** How long a church's metrics are reused before the database is asked again. */
 export const METRICS_TTL_SECONDS = 30;

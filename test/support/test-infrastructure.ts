@@ -34,12 +34,9 @@ import { InMemoryStorageAdapter } from './in-memory-storage.adapter.js';
 import { THROTTLER_STORAGE } from '../../src/composition/tokens.js';
 import { ANALYTICS_QUERY } from '../../src/modules/analytics/analytics.repository.js';
 import { AUTH_REPOSITORY } from '../../src/modules/auth/auth.repository.js';
-import {
-  BILLING_SETTINGS,
-  PAYMENT_PROVIDER,
-  SUBSCRIPTION_REPOSITORY,
-} from '../../src/modules/billing/application/ports/out/billing.ports.js';
-import { FakePaymentAdapter } from '../../src/modules/billing/infrastructure/providers/fake-payment.adapter.js';
+import { BILLING_SETTINGS, PAYMENT_PROVIDER } from '../../src/modules/billing/adapters/ports.js';
+import { SUBSCRIPTION_REPOSITORY } from '../../src/modules/billing/billing.repository.js';
+import { FakePaymentAdapter } from '../../src/modules/billing/adapters/fake-payment.adapter.js';
 import {
   CALENDAR_REPOSITORY,
   CONTENT_QUERY,
@@ -47,11 +44,8 @@ import {
   GENERATION_REPOSITORY,
 } from '../../src/modules/content/content.repository.js';
 import { READINESS_CHECKS } from '../../src/modules/health/helper.js';
-import {
-  INTEGRATION_REPOSITORY,
-  INTEGRATION_SETTINGS,
-  OAUTH_PROVIDERS,
-} from '../../src/modules/integrations/application/ports/out/integration.ports.js';
+import { INTEGRATION_REPOSITORY } from '../../src/modules/integrations/integrations.repository.js';
+import { INTEGRATION_SETTINGS, OAUTH_PROVIDERS } from '../../src/modules/integrations/adapters/ports.js';
 import {
   GROUNDED_ANSWER,
   SEGMENT_SEARCH,
@@ -59,29 +53,20 @@ import {
 import { AIGroundedAnswerAdapter } from '../../src/modules/library/adapters/ai-grounded-answer.adapter.js';
 import { EmbeddingSegmentSearchAdapter } from '../../src/modules/library/adapters/embedding-segment-search.adapter.js';
 import { LIBRARY_FACETS } from '../../src/modules/library/library.repository.js';
-import {
-  PUBLISHING_PROVIDERS,
-  PUBLISHING_REPOSITORY,
-} from '../../src/modules/publishing/application/ports/out/publishing.ports.js';
+import { PUBLISHING_PROVIDERS } from '../../src/modules/integrations/adapters/ports.js';
+import { PUBLISHING_REPOSITORY } from '../../src/modules/integrations/integrations.repository.js';
 import { FakePublisher } from './fake-publisher.js';
 import {
   DOCUMENT_TEXT_EXTRACTOR,
   MEDIA_PROCESSOR,
   SCRATCH_SPACE,
   TRANSCRIPTION,
-} from '../../src/modules/sermons/application/ports/out/processing.ports.js';
-import {
-  SERMON_QUERY,
-  SERMON_REPOSITORY,
-} from '../../src/modules/sermons/application/ports/out/sermon-repository.port.js';
-import {
-  EMBEDDING_REPOSITORY,
-  INTELLIGENCE_REPOSITORY,
-  TRANSCRIPT_REPOSITORY,
-} from '../../src/modules/sermons/application/ports/out/transcript-repository.port.js';
-import { DocumentTextExtractor } from '../../src/modules/sermons/infrastructure/documents/document-text-extractor.js';
-import { OsScratchSpace } from '../../src/modules/sermons/infrastructure/media/os-scratch-space.js';
-import { FakeTranscriptionAdapter } from '../../src/modules/sermons/infrastructure/transcription/fake-transcription.adapter.js';
+} from '../../src/modules/sermons/adapters/ports.js';
+import { SERMON_QUERY, SERMON_REPOSITORY } from '../../src/modules/sermons/sermons.repository.js';
+import { EMBEDDING_REPOSITORY, INTELLIGENCE_REPOSITORY, TRANSCRIPT_REPOSITORY } from '../../src/modules/sermons/sermons.repository.js';
+import { DocumentTextExtractor } from '../../src/modules/sermons/adapters/document-text-extractor.js';
+import { OsScratchSpace } from '../../src/modules/sermons/adapters/os-scratch-space.js';
+import { FakeTranscriptionAdapter } from '../../src/modules/sermons/adapters/fake-transcription.adapter.js';
 import {
   emptyQueueInspector,
   QUEUE_INSPECTOR,
@@ -156,7 +141,6 @@ export class TestInfrastructure {
   readonly email = new RecordingEmailAdapter();
   readonly model = new FakeLanguageModel();
   readonly cache = new InMemoryCacheAdapter(() => this.clock.now().getTime());
-  readonly metaPublisher = new FakePublisher('META');
   readonly emailPublisher = new FakePublisher('EMAIL');
   readonly paymentProvider = new FakePaymentAdapter('http://web.test');
   readonly renderer = new FakeBrandRenderer();
@@ -223,9 +207,9 @@ export class TestInfrastructure {
       ],
       [
         OAUTH_PROVIDERS,
-        [new FakeOAuthProvider('META'), new FakeOAuthProvider('EMAIL')],
+        [new FakeOAuthProvider('WHATSAPP'), new FakeOAuthProvider('EMAIL')],
       ],
-      [PUBLISHING_PROVIDERS, [this.metaPublisher, this.emailPublisher]],
+      [PUBLISHING_PROVIDERS, [this.emailPublisher]],
       [AUTH_REPOSITORY, new InMemoryAuthRepository(db)],
       [UPLOAD_REPOSITORY, new InMemoryUploadRepository(db)],
       [SERMON_REPOSITORY, new InMemorySermonRepository(db, clock)],
