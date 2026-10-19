@@ -32,7 +32,7 @@ import { InMemoryQueueAdapter } from './in-memory-queue.adapter.js';
 import { JOB_OBSERVER } from '../../src/shared/infrastructure/queue/job-observer.js';
 import { InMemoryStorageAdapter } from './in-memory-storage.adapter.js';
 import { THROTTLER_STORAGE } from '../../src/composition/tokens.js';
-import { ANALYTICS_QUERY } from '../../src/modules/analytics/application/ports/out/analytics-query.port.js';
+import { ANALYTICS_QUERY } from '../../src/modules/analytics/analytics.repository.js';
 import { AUTH_REPOSITORY } from '../../src/modules/auth/auth.repository.js';
 import {
   BILLING_SETTINGS,
@@ -55,10 +55,10 @@ import {
 import {
   GROUNDED_ANSWER,
   SEGMENT_SEARCH,
-} from '../../src/modules/library/application/ports/out/segment-search.port.js';
-import { AIGroundedAnswerAdapter } from '../../src/modules/library/infrastructure/ai-grounded-answer.adapter.js';
-import { EmbeddingSegmentSearchAdapter } from '../../src/modules/library/infrastructure/embedding-segment-search.adapter.js';
-import { LIBRARY_FACETS } from '../../src/modules/library/application/ports/out/library-facets.port.js';
+} from '../../src/modules/library/adapters/ports.js';
+import { AIGroundedAnswerAdapter } from '../../src/modules/library/adapters/ai-grounded-answer.adapter.js';
+import { EmbeddingSegmentSearchAdapter } from '../../src/modules/library/adapters/embedding-segment-search.adapter.js';
+import { LIBRARY_FACETS } from '../../src/modules/library/library.repository.js';
 import {
   PUBLISHING_PROVIDERS,
   PUBLISHING_REPOSITORY,
@@ -86,8 +86,8 @@ import {
   emptyQueueInspector,
   QUEUE_INSPECTOR,
 } from '../../src/modules/system/queue-inspector.js';
-import { UPLOAD_REPOSITORY } from '../../src/modules/uploads/application/ports/out/upload-repository.port.js';
-import { USAGE_QUERY } from '../../src/modules/usage/application/ports/out/usage-query.port.js';
+import { UPLOAD_REPOSITORY } from '../../src/modules/uploads/uploads.repository.js';
+import { USAGE_QUERY } from '../../src/modules/usage/usage.repository.js';
 import { InMemoryDb, InMemoryUnitOfWork, TestClock } from './in-memory-db.js';
 import {
   InMemoryAIUsageRecorder,

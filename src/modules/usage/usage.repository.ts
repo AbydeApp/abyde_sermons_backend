@@ -1,15 +1,26 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Prisma } from '../../../generated/prisma/client.js';
+import { Prisma } from '../../generated/prisma/client.js';
 import type {
   AIUsageEntry,
   AIUsageRecorderPort,
   UsageMeterPort,
   UsageRecord,
   UsageUnit,
-} from '../../../shared/application/ports/usage-meter.port.js';
-import { newId } from '../../../shared/domain/id.js';
-import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service.js';
-import type { UsageQueryPort } from '../application/ports/out/usage-query.port.js';
+} from '../../shared/application/ports/usage-meter.port.js';
+import { newId } from '../../shared/domain/id.js';
+import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service.js';
+
+export const USAGE_QUERY = Symbol('USAGE_QUERY');
+
+export interface UsageQueryPort {
+  /** Sum of quantities for a unit within [from, to). */
+  total(
+    churchId: string,
+    unit: UsageUnit,
+    from: Date,
+    to: Date,
+  ): Promise<number>;
+}
 
 @Injectable()
 export class PrismaUsageMeter implements UsageMeterPort {

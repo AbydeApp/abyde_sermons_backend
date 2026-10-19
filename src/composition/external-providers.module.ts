@@ -36,9 +36,9 @@ import {
 import {
   GROUNDED_ANSWER,
   SEGMENT_SEARCH,
-} from '../modules/library/application/ports/out/segment-search.port.js';
-import { AIGroundedAnswerAdapter } from '../modules/library/infrastructure/ai-grounded-answer.adapter.js';
-import { EmbeddingSegmentSearchAdapter } from '../modules/library/infrastructure/embedding-segment-search.adapter.js';
+} from '../modules/library/adapters/ports.js';
+import { AIGroundedAnswerAdapter } from '../modules/library/adapters/ai-grounded-answer.adapter.js';
+import { EmbeddingSegmentSearchAdapter } from '../modules/library/adapters/embedding-segment-search.adapter.js';
 import { PUBLISHING_PROVIDERS } from '../modules/publishing/application/ports/out/publishing.ports.js';
 import {
   MailchimpPublisher,

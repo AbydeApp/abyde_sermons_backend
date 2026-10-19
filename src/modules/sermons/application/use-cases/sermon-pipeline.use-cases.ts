@@ -33,7 +33,7 @@ import {
   type UsageMeterPort,
 } from '../../../../shared/application/ports/usage-meter.port.js';
 import { newId } from '../../../../shared/domain/id.js';
-import { mediaKindOf } from '../../../uploads/domain/upload-policy.js';
+import { mediaKindOf } from '../../../uploads/helper.js';
 import {
   phaseForStage,
   type PipelinePhase,

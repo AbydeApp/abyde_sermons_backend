@@ -3,8 +3,8 @@ import {
   AI_USAGE_RECORDER,
   USAGE_METER,
 } from '../shared/application/ports/usage-meter.port.js';
-import { ANALYTICS_QUERY } from '../modules/analytics/application/ports/out/analytics-query.port.js';
-import { PrismaAnalyticsQuery } from '../modules/analytics/infrastructure/prisma-analytics.query.js';
+import { ANALYTICS_QUERY } from '../modules/analytics/analytics.repository.js';
+import { PrismaAnalyticsQuery } from '../modules/analytics/analytics.repository.js';
 import {
   AUTH_REPOSITORY,
   PrismaAuthRepository,
@@ -25,8 +25,8 @@ import {
 } from '../modules/content/content.repository.js';
 import { INTEGRATION_REPOSITORY } from '../modules/integrations/application/ports/out/integration.ports.js';
 import { PrismaIntegrationRepository } from '../modules/integrations/infrastructure/persistence/prisma-integration.repository.js';
-import { LIBRARY_FACETS } from '../modules/library/application/ports/out/library-facets.port.js';
-import { PrismaLibraryFacets } from '../modules/library/infrastructure/prisma-library-facets.js';
+import { LIBRARY_FACETS } from '../modules/library/library.repository.js';
+import { PrismaLibraryFacets } from '../modules/library/library.repository.js';
 import { PUBLISHING_REPOSITORY } from '../modules/publishing/application/ports/out/publishing.ports.js';
 import { PrismaPublishingRepository } from '../modules/publishing/infrastructure/persistence/prisma-publishing.repository.js';
 import {
@@ -47,14 +47,14 @@ import {
   PrismaIntelligenceRepository,
   PrismaTranscriptRepository,
 } from '../modules/sermons/infrastructure/persistence/prisma-transcript.repositories.js';
-import { UPLOAD_REPOSITORY } from '../modules/uploads/application/ports/out/upload-repository.port.js';
-import { PrismaUploadRepository } from '../modules/uploads/infrastructure/persistence/prisma-upload.repository.js';
-import { USAGE_QUERY } from '../modules/usage/application/ports/out/usage-query.port.js';
+import { UPLOAD_REPOSITORY } from '../modules/uploads/uploads.repository.js';
+import { PrismaUploadRepository } from '../modules/uploads/uploads.repository.js';
+import { USAGE_QUERY } from '../modules/usage/usage.repository.js';
 import {
   PrismaAIUsageRecorder,
   PrismaUsageMeter,
   PrismaUsageQuery,
-} from '../modules/usage/infrastructure/prisma-usage.adapters.js';
+} from '../modules/usage/usage.repository.js';
 
 import {
   BRAND_PROFILE_REPOSITORY,

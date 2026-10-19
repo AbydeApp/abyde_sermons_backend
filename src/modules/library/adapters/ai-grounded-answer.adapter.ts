@@ -8,7 +8,7 @@ import { formatTimestamp } from '../../sermons/application/services/prompt-conte
 import type {
   GroundedAnswer,
   GroundedAnswerPort,
-} from '../application/ports/out/segment-search.port.js';
+} from './ports.js';
 
 const GroundedAnswerSchema = z.object({
   sufficientEvidence: z.boolean(),

@@ -34,8 +34,8 @@ import type {
   Page,
   PageRequest,
 } from '../../../../shared/domain/pagination.js';
-import { ConsumeUploadUseCase } from '../../../uploads/application/use-cases/upload.use-cases.js';
-import type { MediaKind } from '../../../uploads/domain/upload-policy.js';
+import type { MediaKind } from '../../../uploads/helper.js';
+import { UploadsService } from '../../../uploads/uploads.service.js';
 import type {
   ProcessingStage,
   SermonSourceType,
@@ -92,8 +92,8 @@ export class CreateSermonUseCase {
     @Inject(SERMON_REPOSITORY) private readonly sermons: SermonRepositoryPort,
     @Inject(TRANSCRIPT_REPOSITORY)
     private readonly transcripts: TranscriptRepositoryPort,
-    @Inject(ConsumeUploadUseCase)
-    private readonly consumeUpload: ConsumeUploadUseCase,
+    @Inject(UploadsService)
+    private readonly consumeUpload: UploadsService,
     @Inject(SERMON_QUOTA) private readonly quota: SermonQuotaPort,
     @Inject(PLAN_ENTITLEMENTS)
     private readonly entitlements: PlanEntitlementsPort,

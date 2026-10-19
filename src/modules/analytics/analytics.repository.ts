@@ -1,9 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service.js';
-import type {
-  AnalyticsQueryPort,
-  ProductMetrics,
-} from '../application/ports/out/analytics-query.port.js';
+import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service.js';
+import type { ProductMetrics } from './helper.js';
+
+export const ANALYTICS_QUERY = Symbol('ANALYTICS_QUERY');
+
+export interface AnalyticsQueryPort {
+  metrics(churchId: string): Promise<ProductMetrics>;
+  sermonsCreatedBetween(
+    churchId: string,
+    from: Date,
+    to: Date,
+  ): Promise<number>;
+}
 
 @Injectable()
 export class PrismaAnalyticsQuery implements AnalyticsQueryPort {

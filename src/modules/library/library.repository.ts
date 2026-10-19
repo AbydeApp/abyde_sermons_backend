@@ -1,9 +1,21 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service.js';
-import type {
-  LibraryFacets,
-  LibraryFacetsPort,
-} from '../application/ports/out/library-facets.port.js';
+import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service.js';
+
+export interface LibraryFacets {
+  speakers: string[];
+  series: string[];
+  scriptures: string[];
+  themes: string[];
+  years: string[];
+  tags: string[];
+}
+
+export const LIBRARY_FACETS = Symbol('LIBRARY_FACETS');
+
+export interface LibraryFacetsPort {
+  /** Distinct filter values across the church's READY sermons. */
+  facets(churchId: string): Promise<LibraryFacets>;
+}
 
 @Injectable()
 export class PrismaLibraryFacets implements LibraryFacetsPort {

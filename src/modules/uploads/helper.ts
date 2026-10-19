@@ -1,11 +1,33 @@
-import {
-  DomainError,
-  validationError,
-} from '../../../shared/domain/domain-error.js';
+import { z } from 'zod';
+import { DomainError, validationError } from '../../shared/domain/domain-error.js';
+import type { PresignedUpload } from '../../shared/application/ports/storage.port.js';
 
-export type UploadPurpose = 'SERMON_MEDIA' | 'CHURCH_LOGO';
+// ───────────────────────── Constants ─────────────────────────
 
-export type MediaKind = 'AUDIO' | 'VIDEO' | 'PDF' | 'DOCX' | 'TEXT' | 'IMAGE';
+export const PRESIGN_TTL_SECONDS = 15 * 60;
+/** Presigned uploads never attached to anything are removed after this long. */
+export const STALE_UPLOAD_MS = 24 * 3600 * 1000;
+export const STALE_UPLOAD_BATCH = 500;
+
+// ───────────────────────── Errors ─────────────────────────
+
+export const uploadError = (code: string, message: string) =>
+  new DomainError('UNPROCESSABLE', code, message, { objectKey: [message] });
+
+export const uploadNotFound = () => uploadError('UPLOAD_NOT_FOUND', 'Upload not found');
+export const uploadAlreadyUsed = () =>
+  uploadError('UPLOAD_ALREADY_USED', 'This upload has already been used');
+export const uploadIncomplete = () =>
+  uploadError('UPLOAD_INCOMPLETE', 'The file has not finished uploading');
+export const uploadTooLarge = () => uploadError('UPLOAD_TOO_LARGE', 'The uploaded file is too large');
+export const uploadTypeMismatch = () =>
+  uploadError('UPLOAD_TYPE_MISMATCH', 'The uploaded file type does not match');
+
+// ───────────────────────── Upload policy ─────────────────────────
+
+export type UploadPurpose = 'SERMON_MEDIA';
+
+export type MediaKind = 'AUDIO' | 'VIDEO' | 'PDF' | 'DOCX' | 'TEXT';
 
 interface AllowedType {
   extensions: string[];
@@ -33,20 +55,10 @@ const POLICIES: Record<UploadPurpose, Record<string, AllowedType>> = {
     },
     'text/plain': { extensions: ['txt'], kind: 'TEXT', maxBytes: 2 * GB },
   },
-  CHURCH_LOGO: {
-    'image/png': { extensions: ['png'], kind: 'IMAGE', maxBytes: 5 * MB },
-    'image/jpeg': {
-      extensions: ['jpg', 'jpeg'],
-      kind: 'IMAGE',
-      maxBytes: 5 * MB,
-    },
-    'image/webp': { extensions: ['webp'], kind: 'IMAGE', maxBytes: 5 * MB },
-  },
 };
 
 const FOLDERS: Record<UploadPurpose, string> = {
   SERMON_MEDIA: 'sermons',
-  CHURCH_LOGO: 'logos',
 };
 
 export interface ValidatedUpload {
@@ -122,3 +134,29 @@ export const objectKeyFor = (
 
 export const isKeyOwnedBy = (objectKey: string, churchId: string): boolean =>
   objectKey.startsWith(`churches/${churchId}/`);
+
+// ───────────────────────── Responses & schemas ─────────────────────────
+
+export interface PresignedUploadResponse {
+  uploadUrl: string;
+  method: 'PUT';
+  headers: Record<string, string>;
+  objectKey: string;
+  expiresAt: string;
+}
+
+export const toPresignedUploadResponse = (upload: PresignedUpload): PresignedUploadResponse => ({
+  uploadUrl: upload.uploadUrl,
+  method: upload.method,
+  headers: upload.headers,
+  objectKey: upload.objectKey,
+  expiresAt: upload.expiresAt.toISOString(),
+});
+
+export const PresignBody = z.object({
+  fileName: z.string({ error: 'File name is required' }).min(1, 'File name is required').max(255),
+  contentType: z.string({ error: 'Content type is required' }).min(1).max(255),
+  sizeBytes: z.number({ error: 'File size is required' }).int().positive(),
+});
+
+export const SermonPresignBody = PresignBody.extend({ purpose: z.literal('SERMON_MEDIA') });

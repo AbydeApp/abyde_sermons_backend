@@ -8,7 +8,7 @@ import type {
   UserRecord,
 } from '../../src/modules/auth/auth.repository.js';
 import type { ChurchRecord } from '../../src/modules/auth/auth.repository.js';
-import type { UploadRecord } from '../../src/modules/uploads/application/ports/out/upload-repository.port.js';
+import type { UploadRecord } from '../../src/modules/uploads/uploads.repository.js';
 import type { SermonProps } from '../../src/modules/sermons/domain/sermon.entity.js';
 import type { SermonAssetRecord } from '../../src/modules/sermons/application/ports/out/sermon-repository.port.js';
 import type {

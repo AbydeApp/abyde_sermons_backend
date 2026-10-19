@@ -17,7 +17,7 @@ import type { SermonQuotaPort } from '../../../sermons/application/ports/out/pro
 import {
   USAGE_QUERY,
   type UsageQueryPort,
-} from '../../../usage/application/ports/out/usage-query.port.js';
+} from '../../../usage/usage.repository.js';
 import {
   type PaidPlanId,
   type PlanFeatures,

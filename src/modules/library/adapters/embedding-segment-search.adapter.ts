@@ -15,7 +15,7 @@ import {
 import type {
   SegmentSearchPort,
   SegmentSearchResult,
-} from '../application/ports/out/segment-search.port.js';
+} from './ports.js';
 
 const QUERY_EMBEDDING_TTL_SECONDS = 24 * 3600;
 const MAX_KEYWORDS = 8;

@@ -1,10 +1,32 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Upload } from '../../../../generated/prisma/client.js';
-import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service.js';
-import type {
-  UploadRecord,
-  UploadRepositoryPort,
-} from '../../application/ports/out/upload-repository.port.js';
+import type { Upload } from '../../generated/prisma/client.js';
+import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service.js';
+import type { UploadPurpose } from './helper.js';
+
+export const UPLOAD_REPOSITORY = Symbol('UPLOAD_REPOSITORY');
+
+export interface UploadRecord {
+  id: string;
+  churchId: string;
+  objectKey: string;
+  purpose: UploadPurpose;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  expiresAt: Date;
+  consumedAt: Date | null;
+  createdAt: Date;
+}
+
+export interface UploadRepositoryPort {
+  create(record: UploadRecord): Promise<void>;
+  findByKey(churchId: string, objectKey: string): Promise<UploadRecord | null>;
+  /** Marks consumed only if unconsumed; false when another request already used the upload. */
+  markConsumed(id: string, at: Date): Promise<boolean>;
+  findStaleUnconsumed(olderThan: Date, limit: number): Promise<UploadRecord[]>;
+  /** Deletes the record only if it is still unconsumed; false when it was consumed meanwhile. */
+  deleteIfUnconsumed(id: string): Promise<boolean>;
+}
 
 const toRecord = (row: Upload): UploadRecord => ({
   ...row,

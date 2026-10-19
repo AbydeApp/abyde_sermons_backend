@@ -1,12 +1,10 @@
 import { Module } from '@nestjs/common';
-import {
-  GetAnalyticsUseCase,
-  GetDashboardUseCase,
-} from './application/use-cases/analytics.use-cases.js';
-import { AnalyticsController } from './presentation/http/analytics.controller.js';
+import { AnalyticsController } from './analytics.controller.js';
+import { AnalyticsService } from './analytics.service.js';
 
+/** Read-only product metrics. ANALYTICS_QUERY is bound in src/composition/. */
 @Module({
   controllers: [AnalyticsController],
-  providers: [GetAnalyticsUseCase, GetDashboardUseCase],
+  providers: [AnalyticsService],
 })
 export class AnalyticsModule {}

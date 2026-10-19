@@ -2,7 +2,7 @@ import {
   isKeyOwnedBy,
   objectKeyFor,
   validateUploadRequest,
-} from './upload-policy.js';
+} from './helper.js';
 
 describe('upload policy', () => {
   it('accepts allow-listed sermon media within limits', () => {
@@ -62,17 +62,6 @@ describe('upload policy', () => {
         fieldErrors: { [field]: [expect.any(String)] },
       }),
     );
-  });
-
-  it('never allows SVG logos (script injection risk)', () => {
-    expect(() =>
-      validateUploadRequest({
-        purpose: 'CHURCH_LOGO',
-        fileName: 'logo.svg',
-        contentType: 'image/svg+xml',
-        sizeBytes: 10,
-      }),
-    ).toThrow();
   });
 
   it('builds church-scoped keys', () => {

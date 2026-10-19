@@ -23,7 +23,7 @@ import {
 import type {
   UploadRecord,
   UploadRepositoryPort,
-} from '../../src/modules/uploads/application/ports/out/upload-repository.port.js';
+} from '../../src/modules/uploads/uploads.repository.js';
 import { PROCESSING_STATUSES } from '../../src/modules/sermons/domain/processing.js';
 import {
   Sermon,
@@ -67,7 +67,7 @@ import type {
   ContentRow,
   GenerationRepositoryPort,
 } from '../../src/modules/content/content.repository.js';
-import type { UsageQueryPort } from '../../src/modules/usage/application/ports/out/usage-query.port.js';
+import type { UsageQueryPort } from '../../src/modules/usage/usage.repository.js';
 import type { SubscriptionRecord } from '../../src/modules/billing/domain/subscription.js';
 import type { SubscriptionRepositoryPort } from '../../src/modules/billing/application/ports/out/billing.ports.js';
 import type {
@@ -83,11 +83,9 @@ import type {
 import type {
   LibraryFacets,
   LibraryFacetsPort,
-} from '../../src/modules/library/application/ports/out/library-facets.port.js';
-import type {
-  AnalyticsQueryPort,
-  ProductMetrics,
-} from '../../src/modules/analytics/application/ports/out/analytics-query.port.js';
+} from '../../src/modules/library/library.repository.js';
+import type { AnalyticsQueryPort } from '../../src/modules/analytics/analytics.repository.js';
+import type { ProductMetrics } from '../../src/modules/analytics/helper.js';
 import { lagosYear } from '../../src/shared/domain/lagos-time.js';
 import type { InMemoryDb, TestClock } from './in-memory-db.js';
 

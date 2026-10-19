@@ -11,7 +11,7 @@ import {
 } from '../../shared/application/ports/email.port.js';
 import { QUEUES } from '../../shared/application/ports/queue.port.js';
 import { PurgeOldRecordsUseCase } from './purge-old-records.use-case.js';
-import { PurgeStaleUploadsUseCase } from '../uploads/application/use-cases/upload.use-cases.js';
+import { UploadsService } from '../uploads/uploads.service.js';
 
 const SEND_EMAIL_JOB = { queue: QUEUES.EMAIL, name: 'send' } as const;
 const PURGE_OLD_RECORDS_JOB = {
@@ -29,8 +29,8 @@ export class SystemJobHandlers implements OnModuleInit {
   constructor(
     @Inject(JOB_HANDLER_REGISTRY) private readonly registry: JobHandlerRegistry,
     @Inject(EMAIL_SENDER) private readonly email: EmailSenderPort,
-    @Inject(PurgeStaleUploadsUseCase)
-    private readonly purgeUploads: PurgeStaleUploadsUseCase,
+    @Inject(UploadsService)
+    private readonly uploads: UploadsService,
     @Inject(PurgeOldRecordsUseCase)
     private readonly purgeOldRecords: PurgeOldRecordsUseCase,
   ) {}
@@ -45,7 +45,7 @@ export class SystemJobHandlers implements OnModuleInit {
       defineJobHandler(
         PURGE_UPLOADS_JOB,
         async (_payload, context) =>
-          void (await this.purgeUploads.execute(context)),
+          void (await this.uploads.purgeStale(context)),
       ),
     );
     this.registry.registerRecurring({

@@ -6,7 +6,7 @@ import { CurrentChurchId } from '../../shared/infrastructure/http/auth.decorator
 import { AI_THROTTLE } from '../../shared/infrastructure/http/route-limits.js';
 import { ParseIdPipe } from '../../shared/infrastructure/http/uuid.pipe.js';
 import { zod } from '../../shared/infrastructure/http/zod-validation.pipe.js';
-import { toPresignedUploadResponse } from '../uploads/presentation/http/presigned-upload.response.js';
+import { toPresignedUploadResponse } from '../uploads/helper.js';
 import { BrandService } from './brand.service.js';
 import {
   BrandBody, type BrandProfileView, type MediaAssetView, nullsToUndefined, PresignBody, RenderBody,

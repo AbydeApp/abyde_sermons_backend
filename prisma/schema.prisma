@@ -45,7 +45,6 @@ enum SermonSourceType {
 
 enum UploadPurpose {
   SERMON_MEDIA
-  CHURCH_LOGO
 }
 
 enum JobStatus {
