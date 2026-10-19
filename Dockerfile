@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 # One image, three roles: API (default), worker (`node dist/worker.js`) and migrations (`npm run db:migrate`).
 
-FROM node:22-bookworm-slim AS deps
+FROM node:26-bookworm-slim AS deps
 WORKDIR /app
 # Match the npm major that wrote package-lock.json.
 RUN npm install -g npm@12 >/dev/null
@@ -12,7 +12,7 @@ FROM deps AS build
 COPY . .
 RUN npx prisma generate && npm run build && npm prune --omit=dev --ignore-scripts
 
-FROM node:22-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 ENV NODE_ENV=production
 # ffmpeg is required by the worker for sermon media and branded clips; fonts back the branded
 # image and caption rendering (without any, text renders blank); tini reaps child processes
