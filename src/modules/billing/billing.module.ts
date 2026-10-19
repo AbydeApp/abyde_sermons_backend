@@ -4,9 +4,9 @@ import { SERMON_QUOTA } from '../sermons/adapters/ports.js';
 import {
   BillingService,
   EntitlementService,
-  BillingWebhookService,
   SermonQuotaService,
 } from './billing.service.js';
+import { BillingWebhookService } from './webhook.service.js';
 import { BillingController } from './billing.controller.js';
 
 /**

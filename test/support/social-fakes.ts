@@ -19,15 +19,15 @@ import type {
   PublishOutcome,
   RefreshResult,
   SocialPublishingPort,
-} from '../../src/modules/social/application/ports/out/social-publishing.port.js';
-import type { SocialObserverPort } from '../../src/modules/social/application/ports/out/social-support.ports.js';
-import type { PlatformCapabilities } from '../../src/modules/social/domain/capabilities.js';
-import type { AuthorizedAccount } from '../../src/modules/social/domain/social-connection.js';
+} from '../../src/modules/social/adapters/ports.js';
+import type { SocialObserverPort } from '../../src/modules/social/adapters/ports.js';
+import type { PlatformCapabilities } from '../../src/modules/social/helper.js';
+import type { AuthorizedAccount } from '../../src/modules/social/helper.js';
 import {
   PLATFORMS_FOR_PROVIDER,
   type SocialPlatform,
   type SocialProviderId,
-} from '../../src/modules/social/domain/social-platform.js';
+} from '../../src/modules/social/helper.js';
 
 type Step = PublishOutcome | Error;
 

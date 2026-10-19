@@ -1,6 +1,6 @@
 import { GenerationService } from '../src/modules/content/generation.service.js';
 import { SermonsService } from '../src/modules/sermons/sermons.service.js';
-import { PurgeOldRecordsUseCase } from '../src/modules/system/purge-old-records.use-case.js';
+import { SystemService } from '../src/modules/system/system.service.js';
 import { AuthService } from '../src/modules/auth/auth.service.js';
 import { Client, createTestApp, type TestApp } from './support/test-app.js';
 
@@ -197,17 +197,17 @@ describe('resilience (e2e)', () => {
 
   it('prunes old webhook records and AI cost logs, keeping recent ones', async () => {
     await client.readySermon();
-    const purge = t.app.get(PurgeOldRecordsUseCase);
+    const purge = t.app.get(SystemService);
     const logs = t.infra.db.aiUsageLogs.length;
     expect(logs).toBeGreaterThan(0);
     t.infra.db.webhookEvents.set('fake:old', t.infra.clock.now());
-    expect(await purge.execute()).toEqual({ webhookEvents: 0, aiUsageLogs: 0 });
+    expect(await purge.purgeOldRecords()).toEqual({ webhookEvents: 0, aiUsageLogs: 0 });
     t.infra.clock.advance(91 * 24 * 3600 * 1000);
     t.infra.db.webhookEvents.set('fake:recent', t.infra.clock.now());
-    expect(await purge.execute()).toEqual({ webhookEvents: 1, aiUsageLogs: 0 });
+    expect(await purge.purgeOldRecords()).toEqual({ webhookEvents: 1, aiUsageLogs: 0 });
     expect([...t.infra.db.webhookEvents.keys()]).toEqual(['fake:recent']);
     t.infra.clock.advance(310 * 24 * 3600 * 1000);
-    expect((await purge.execute()).aiUsageLogs).toBe(logs);
+    expect((await purge.purgeOldRecords()).aiUsageLogs).toBe(logs);
   });
 
   it('accepts a large document upload but refuses to parse it, with a clear message', async () => {

@@ -54,12 +54,12 @@ import {
   SOCIAL_AUDIT_LOG,
   SOCIAL_CONNECTION_REPOSITORY,
   SOCIAL_POST_REPOSITORY,
-} from '../modules/social/application/ports/out/social-repositories.port.js';
+} from '../modules/social/social.repository.js';
 import {
   PrismaSocialAuditLog,
   PrismaSocialConnectionRepository,
   PrismaSocialPostRepository,
-} from '../modules/social/infrastructure/persistence/prisma-social.repositories.js';
+} from '../modules/social/social.repository.js';
 
 /** Binds every repository port to its Prisma adapter (the only place Prisma repositories are chosen). */
 export const PRISMA_REPOSITORIES: Provider[] = [

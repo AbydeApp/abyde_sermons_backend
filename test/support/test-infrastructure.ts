@@ -70,7 +70,7 @@ import { FakeTranscriptionAdapter } from '../../src/modules/sermons/adapters/fak
 import {
   emptyQueueInspector,
   QUEUE_INSPECTOR,
-} from '../../src/modules/system/queue-inspector.js';
+} from '../../src/modules/system/adapters/queue-inspector.js';
 import { UPLOAD_REPOSITORY } from '../../src/modules/uploads/uploads.repository.js';
 import { USAGE_QUERY } from '../../src/modules/usage/usage.repository.js';
 import { InMemoryDb, InMemoryUnitOfWork, TestClock } from './in-memory-db.js';
@@ -108,15 +108,15 @@ import {
   SOCIAL_AUDIT_LOG,
   SOCIAL_CONNECTION_REPOSITORY,
   SOCIAL_POST_REPOSITORY,
-} from '../../src/modules/social/application/ports/out/social-repositories.port.js';
-import { SOCIAL_PROVIDER_REGISTRY } from '../../src/modules/social/application/ports/out/social-publishing.port.js';
+} from '../../src/modules/social/social.repository.js';
+import { SOCIAL_PROVIDER_REGISTRY } from '../../src/modules/social/adapters/ports.js';
 import {
   SOCIAL_OBSERVER,
   SOCIAL_SETTINGS,
   SOCIAL_TOKEN_CIPHER,
-} from '../../src/modules/social/application/ports/out/social-support.ports.js';
-import type { SocialProviderId } from '../../src/modules/social/domain/social-platform.js';
-import { SocialProviderRegistry } from '../../src/modules/social/infrastructure/social-provider.registry.js';
+} from '../../src/modules/social/adapters/ports.js';
+import type { SocialProviderId } from '../../src/modules/social/helper.js';
+import { SocialProviderRegistry } from '../../src/modules/social/adapters/social-provider.registry.js';
 import { AesGcmTokenCipher } from '../../src/shared/infrastructure/crypto/aes-gcm-token-cipher.js';
 import {
   InMemoryBrandProfileRepository,

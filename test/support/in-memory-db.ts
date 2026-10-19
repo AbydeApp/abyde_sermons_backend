@@ -26,12 +26,12 @@ import type { GenerationJobRecord } from '../../src/modules/content/helper.js';
 import type { SubscriptionRecord } from '../../src/modules/billing/helper.js';
 import type { IntegrationRecord } from '../../src/modules/integrations/helper.js';
 import type { BrandProfile, MediaAsset } from '../../src/modules/brand/helper.js';
-import type { SocialAuditEntry } from '../../src/modules/social/application/ports/out/social-repositories.port.js';
-import type { SocialConnection } from '../../src/modules/social/domain/social-connection.js';
+import type { SocialAuditEntry } from '../../src/modules/social/social.repository.js';
+import type { SocialConnection } from '../../src/modules/social/helper.js';
 import type {
   SocialPost,
   SocialPublication,
-} from '../../src/modules/social/domain/social-post.js';
+} from '../../src/modules/social/helper.js';
 import type { PublishAttemptRecord } from '../../src/modules/integrations/helper.js';
 
 /**

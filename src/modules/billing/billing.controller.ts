@@ -21,11 +21,11 @@ import {
 import { RequireIdempotencyKey } from '../../shared/infrastructure/http/idempotency.interceptor.js';
 import { zod } from '../../shared/infrastructure/http/zod-validation.pipe.js';
 import { PAID_PLAN_IDS } from './helper.js';
+import { BillingService } from './billing.service.js';
 import {
-  BillingService,
   BillingWebhookService,
   WebhookRetryLaterError,
-} from './billing.service.js';
+} from './webhook.service.js';
 
 const CheckoutBody = z.object({
   planId: z.enum(PAID_PLAN_IDS, { error: 'Unknown plan' }).default('standard'),

@@ -1,5 +1,5 @@
-import { DispatchDueSocialPostsUseCase } from '../src/modules/social/application/use-cases/publishing.use-cases.js';
-import { SocialProviderError } from '../src/modules/social/domain/social-errors.js';
+import { PublishingService } from '../src/modules/social/publishing.service.js';
+import { SocialProviderError } from '../src/modules/social/helper.js';
 import { Client, createTestApp, type TestApp } from './support/test-app.js';
 
 /** Direct social publishing with mocked providers: connect, create, schedule/publish, workers, status. */
@@ -14,7 +14,7 @@ describe('social publishing (e2e)', () => {
   const key = () => ({
     'Idempotency-Key': `key-${Math.random().toString(36).slice(2, 12)}`,
   });
-  const dispatch = () => t.app.get(DispatchDueSocialPostsUseCase).execute();
+  const dispatch = () => t.app.get(PublishingService).dispatchDue();
 
   /**
    * Runs the OAuth round trip for a provider: the provider redirect is forwarded to the web app,

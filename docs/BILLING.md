@@ -33,4 +33,4 @@ The old STARTER/GROWTH/MINISTRY environment variables are no longer used. Existi
 
 ## Structure
 
-`billing.controller.ts` handles HTTP, `billing.service.ts` owns billing/entitlements/webhooks, `billing.repository.ts` colocates the persistence contract and Prisma implementation, `helper.ts` contains plan/date/access rules, and `adapters/` contains provider contracts and implementations. Persistence and payment providers remain bound in the composition modules.
+`billing.controller.ts` handles HTTP, `billing.service.ts` owns billing and entitlements, `webhook.service.ts` handles provider notifications, `billing.repository.ts` colocates the persistence contract and Prisma implementation, `helper.ts` contains plan/date/access rules, and `adapters/` contains provider contracts and implementations. Persistence and payment providers remain bound in the composition modules.

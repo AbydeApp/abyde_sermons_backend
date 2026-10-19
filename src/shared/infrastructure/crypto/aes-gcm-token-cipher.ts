@@ -4,7 +4,7 @@ import {
   createHash,
   randomBytes,
 } from 'node:crypto';
-import type { TokenCipherPort } from '../../../modules/social/application/ports/out/social-support.ports.js';
+import type { TokenCipherPort } from '../../../modules/social/adapters/ports.js';
 
 const VERSION = 't1';
 

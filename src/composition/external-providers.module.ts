@@ -58,22 +58,22 @@ import {
 } from '../modules/brand/adapters/ports.js';
 import { MediaMetrics } from '../modules/brand/adapters/media-metrics.js';
 import { MediaRenderer } from '../modules/brand/adapters/media-renderer.js';
-import { SOCIAL_PROVIDER_REGISTRY } from '../modules/social/application/ports/out/social-publishing.port.js';
+import { SOCIAL_PROVIDER_REGISTRY } from '../modules/social/adapters/ports.js';
 import {
   SOCIAL_OBSERVER,
   SOCIAL_SETTINGS,
   SOCIAL_TOKEN_CIPHER,
   type SocialObserverPort,
-} from '../modules/social/application/ports/out/social-support.ports.js';
-import type { SocialProviderId } from '../modules/social/domain/social-platform.js';
-import { LinkedInSocialAdapter } from '../modules/social/infrastructure/providers/linkedin/linkedin-social.adapter.js';
-import { MetaSocialAdapter } from '../modules/social/infrastructure/providers/meta/meta-social.adapter.js';
-import { MediaFiles } from '../modules/social/infrastructure/providers/shared/media-download.js';
-import { TikTokSocialAdapter } from '../modules/social/infrastructure/providers/tiktok/tiktok-social.adapter.js';
-import { XSocialAdapter } from '../modules/social/infrastructure/providers/x/x-social.adapter.js';
-import { YouTubeSocialAdapter } from '../modules/social/infrastructure/providers/youtube/youtube-social.adapter.js';
-import { SocialMetrics } from '../modules/social/infrastructure/social-metrics.js';
-import { SocialProviderRegistry } from '../modules/social/infrastructure/social-provider.registry.js';
+} from '../modules/social/adapters/ports.js';
+import type { SocialProviderId } from '../modules/social/helper.js';
+import { LinkedInSocialAdapter } from '../modules/social/adapters/providers/linkedin/linkedin-social.adapter.js';
+import { MetaSocialAdapter } from '../modules/social/adapters/providers/meta/meta-social.adapter.js';
+import { MediaFiles } from '../modules/social/adapters/providers/shared/media-download.js';
+import { TikTokSocialAdapter } from '../modules/social/adapters/providers/tiktok/tiktok-social.adapter.js';
+import { XSocialAdapter } from '../modules/social/adapters/providers/x/x-social.adapter.js';
+import { YouTubeSocialAdapter } from '../modules/social/adapters/providers/youtube/youtube-social.adapter.js';
+import { SocialMetrics } from '../modules/social/adapters/social-metrics.js';
+import { SocialProviderRegistry } from '../modules/social/adapters/social-provider.registry.js';
 import { AesGcmTokenCipher } from '../shared/infrastructure/crypto/aes-gcm-token-cipher.js';
 import type { StoragePort } from '../shared/application/ports/storage.port.js';
 import type { ScratchSpacePort } from '../modules/sermons/adapters/ports.js';

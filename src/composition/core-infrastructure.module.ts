@@ -36,7 +36,7 @@ import {
 import {
   BullMqQueueInspector,
   QUEUE_INSPECTOR,
-} from '../modules/system/queue-inspector.js';
+} from '../modules/system/adapters/queue-inspector.js';
 import { THROTTLER_STORAGE } from './tokens.js';
 
 const DEV_KEY_SEED = 'abyde-sermon-development-only-key';

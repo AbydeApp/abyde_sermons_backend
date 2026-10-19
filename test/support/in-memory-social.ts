@@ -14,18 +14,18 @@ import type {
   SocialConnectionRepositoryPort,
   SocialPostFilter,
   SocialPostRepositoryPort,
-} from '../../src/modules/social/application/ports/out/social-repositories.port.js';
+} from '../../src/modules/social/social.repository.js';
 import {
   grantIdOf,
   type SocialConnection,
-} from '../../src/modules/social/domain/social-connection.js';
-import type { SocialPlatform } from '../../src/modules/social/domain/social-platform.js';
+} from '../../src/modules/social/helper.js';
+import type { SocialPlatform } from '../../src/modules/social/helper.js';
 import type {
   PublicationStatus,
   SocialPost,
   SocialPostAggregate,
   SocialPublication,
-} from '../../src/modules/social/domain/social-post.js';
+} from '../../src/modules/social/helper.js';
 import {
   type Page,
   type PageRequest,
